@@ -46,8 +46,33 @@
 
 ---
 
-## 3. Pending Preprocessing Decision: `TotalCharges` Whitespace Handling
+## 3. Preprocessing Recommendation: `TotalCharges` Whitespace Handling
 
-- **Audit Findings**: Exactly 11 rows contain `" "` in `TotalCharges`. All 11 records have `tenure == 0` and `Churn == "No"`.
-- **Integrity Status**: The raw CSV file in `data/raw/` remains completely unmodified. No silent conversions are applied during Phase 1.
-- **Pending Decision**: The proposal to convert these 11 whitespace entries to `0.0` (reflecting zero accumulated billing at initial subscription) or evaluate alternative imputations is formally recorded as a **pending preprocessing decision**. It will be investigated during Phase 2 exploratory data analysis and implemented inside Phase 3 preprocessing pipelines.
+- **Audit Findings**: Exactly 11 rows contain `" "` in `TotalCharges`. All 11 records have `tenure == 0` and `Churn == "No"` (10 on Two-year contracts, 1 on One-year contract).
+- **Integrity Status**: The raw CSV file in `data/raw/` remains completely unmodified.
+- **Empirical Proof**: For all 613 accounts with `tenure == 1`, $\text{TotalCharges} == \text{MonthlyCharges}$ ($\Delta = 0.00$), proving that TotalCharges represents accumulated completed billing cycles.
+- **Phase 2 Conclusion**: At enrollment (`tenure == 0`), accumulated billed revenue is operationally $0.00. Converting whitespace to `0.0` in Phase 3 is the recommended, domain-consistent treatment.
+
+---
+
+## 4. Phase 2 Verified Distribution Statistics
+
+### Numerical Distribution Profiles
+
+| Feature | Count | Mean | Std | Min | 25% | Median | 75% | Max | IQR | Skewness | Churned Median | Retained Median |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `tenure` | 7,043 | 32.37 | 24.56 | 0.00 | 9.00 | 29.00 | 55.00 | 72.00 | 46.00 | +0.24 | 10.00 | 38.00 |
+| `MonthlyCharges` | 7,043 | 64.76 | 30.09 | 18.25 | 35.50 | 70.35 | 89.85 | 118.75 | 54.35 | -0.22 | 79.65 | 64.43 |
+| `TotalCharges`* | 7,032 | 2283.30 | 2266.77 | 18.80 | 401.45 | 1397.47 | 3794.74 | 8684.80 | 3393.29 | +0.96 | 701.50 | 1683.60 |
+
+*\* Evaluated across the 7,032 valid numerical rows.*
+
+### Categorical Churn Associations (Ranked by Cramér's V)
+
+| Feature | Primary Levels | Frequency Distribution | Segment Churn Rate (%) | Cramér's $V$ | FDR $p$-Value |
+|---|---|---|---|---|---|
+| `Contract` | Month-to-month, One year, Two year | 3875 (55%), 1473 (21%), 1695 (24%) | 42.71%, 11.27%, 2.83% | **0.408** | $< 10^{-200}$ |
+| `OnlineSecurity` | No, Yes, No internet | 3498 (50%), 2019 (29%), 1526 (22%) | 41.77%, 14.61%, 7.40% | **0.347** | $< 10^{-180}$ |
+| `TechSupport` | No, Yes, No internet | 3473 (49%), 2044 (29%), 1526 (22%) | 41.65%, 15.17%, 7.40% | **0.344** | $< 10^{-180}$ |
+| `InternetService` | Fiber optic, DSL, No | 3096 (44%), 2421 (34%), 1526 (22%) | 41.89%, 18.96%, 7.40% | **0.320** | $< 10^{-155}$ |
+| `PaymentMethod` | Electronic check, Mailed check, Bank auto, Card auto | 2365 (34%), 1612 (23%), 1544 (22%), 1522 (22%) | 45.29%, 19.11%, 16.71%, 15.24% | **0.302** | $< 10^{-135}$ |

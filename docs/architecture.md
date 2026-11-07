@@ -59,9 +59,15 @@ predictlab-ml-platform/
 ├── src/predictlab/             # Core Python package (business & ML logic)
 │   ├── config.py               # Central configuration & dynamic path resolution
 │   ├── logging_config.py       # Application logging
-│   └── data/                   # Data ingestion and schema validation
-│       ├── load.py
-│       └── validate.py
+│   ├── data/                   # Data ingestion and schema validation
+│   │   ├── load.py
+│   │   └── validate.py
+│   └── profiling/              # Profiling, quality auditing, and diagnostic insights (Phase 2)
+│       ├── __init__.py
+│       ├── quality.py          # Data quality audit & TotalCharges anomaly investigation
+│       ├── summary.py          # Univariate numeric and categorical summaries
+│       ├── insights.py         # Segment churn rates, Chi-square & Mann-Whitney tests
+│       └── visuals.py          # Publication-grade visual figure generation
 ├── app/                        # Streamlit web application (Phase 6)
 ├── models/                     # Serialized model binaries (Phase 4-5)
 ├── artifacts/                  # Serialized transformers, metrics, and figures
@@ -92,6 +98,12 @@ predictlab-ml-platform/
 - **Immutability**: Ingestion functions return isolated copies, leaving raw source files untouched.
 - **Strict Error Boundaries**: Handles missing files, 0-byte corruptions, duplicate CSV headers, and parsing failures gracefully with domain-specific exceptions (`DataValidationError`, `EmptyDatasetError`, `DuplicateColumnsError`, etc.).
 - **Active Pydantic Validation**: Validation functions produce strongly-typed `ValidationResult` objects with active consistency validation (ensuring validity flags, error lists, and row bounds remain strictly synchronized).
+
+### D. Profiling & Diagnostic Insights (`predictlab.profiling`)
+- **Data Quality Auditing (`quality.py`)**: Automates deep structural quality scans, whitespace detection, and dedicated empirical audits of anomalous attributes (such as the 11 zero-tenure `TotalCharges` records).
+- **Statistical Summaries (`summary.py`)**: Calculates robust distribution statistics (mean, median, IQR, skewness) and categorical frequency tables without mutating raw inputs.
+- **Inferential Testing (`insights.py`)**: Computes segment churn rates, Chi-square tests of independence with Benjamini-Hochberg False Discovery Rate (FDR) adjustments, bias-corrected Cramér's V, Mann-Whitney U, and Welch's t-tests.
+- **Visualization Suite (`visuals.py`)**: Generates 16 publication-grade figures saved to `reports/figures/` for exploratory reporting and notebook integration.
 
 ---
 

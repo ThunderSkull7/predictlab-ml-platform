@@ -76,22 +76,33 @@ predictlab-ml-platform/
 │   └── decisions/
 │       └── 0001-initial-tech-stack-and-problem-definition.md
 │
-├── notebooks/                         # Exploratory research notebooks
+├── notebooks/                         # Executed analytical notebooks
+│   ├── 01_data_audit.ipynb            # Data quality audit & TotalCharges investigation
+│   └── 02_eda.ipynb                   # Comprehensive exploratory analysis & Q1-Q10 findings
 │
 ├── src/
 │   └── predictlab/                    # Headless core Python package
 │       ├── __init__.py
 │       ├── config.py                  # Pydantic Settings & dynamic path resolution
 │       ├── logging_config.py          # Structured logging configuration
-│       └── data/
+│       ├── data/
+│       │   ├── __init__.py
+│       │   ├── load.py                # CSV ingestion with error boundaries & duplicate header detection
+│       │   └── validate.py            # Active Pydantic schema & consistency validation
+│       └── profiling/                 # Profiling & diagnostic insights package (Phase 2)
 │           ├── __init__.py
-│           ├── load.py                # CSV ingestion with error boundaries & duplicate header detection
-│           └── validate.py            # Active Pydantic schema & consistency validation
+│           ├── quality.py             # Data quality audit & anomaly investigation
+│           ├── summary.py             # Univariate numeric & categorical summaries
+│           ├── insights.py            # Segment churn rates, Chi-square & Mann-Whitney tests
+│           └── visuals.py             # Publication-grade visual figure generation
 │
 ├── app/                               # Streamlit UI application (Phase 6)
 ├── models/                            # Serialized model binaries (Phase 4)
 ├── artifacts/                         # Preprocessors, encoders, metrics (Phase 3-5)
 ├── reports/                           # Generated evaluation reports & figures
+│   ├── data_quality_report.md         # Comprehensive data quality audit report
+│   ├── eda_report.md                  # Detailed analytical findings & statistical test report
+│   └── figures/                       # 16 publication-grade visualizations
 │
 ├── tests/
 │   ├── fixtures/
@@ -99,9 +110,11 @@ predictlab-ml-platform/
 │   ├── unit/
 │   │   ├── test_config.py             # Config & path resolution tests
 │   │   ├── test_load.py               # Ingestion & error-handling tests
-│   │   └── test_validate.py           # Schema & Pydantic consistency validation tests
+│   │   ├── test_validate.py           # Schema & Pydantic consistency validation tests
+│   │   └── test_profiling.py          # Statistical profiling & data quality tests
 │   └── integration/
-│       └── test_data_pipeline.py      # End-to-end ingestion/validation pipeline
+│       ├── test_data_pipeline.py      # End-to-end ingestion/validation pipeline
+│       └── test_eda_pipeline.py       # End-to-end profiling pipeline on canonical dataset
 │
 ├── .env.example                       # Environment variable template
 ├── .gitignore                         # Comprehensive ignore rules
@@ -122,7 +135,14 @@ PredictLab is developed following a rigorous 7-phase engineering plan:
   - Retrospective classification problem formulation, data dictionary, and data leakage audit.
   - Active Pydantic validation and CSV ingestion with 100% test pass rate.
   - Restoration and locking of approved dependency versions (`scikit-learn 1.6.1`, `altair 5.5.0`, `streamlit 1.67.0`).
-- [ ] **Phase 2: Exploratory Data Analysis & Diagnostic Insights**
+- [x] **Phase 2: Exploratory Data Analysis & Diagnostic Insights**
+  - Data quality audit, whitespace detection, and `TotalCharges` anomaly investigation.
+  - Univariate, bivariate, and multivariate profiling across all 20 features.
+  - Inferential hypothesis testing: Chi-square with Benjamini-Hochberg FDR and Mann-Whitney U tests.
+  - Answers to the 10 core analytical questions documented with empirical evidence.
+  - 16 publication-grade figures generated in `reports/figures/`.
+  - Executed notebooks `01_data_audit.ipynb` and `02_eda.ipynb`.
+  - 34 automated unit and integration tests passing.
 - [ ] **Phase 3: Preprocessing, Feature Engineering & Leakage-Free Pipeline**
 - [ ] **Phase 4: Model Exploration, Baseline Establishment & Comparison**
 - [ ] **Phase 5: Probability Calibration, Threshold Tuning & Evaluation**

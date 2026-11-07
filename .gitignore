@@ -50,8 +50,6 @@ models/*
 !models/.gitkeep
 artifacts/*
 !artifacts/.gitkeep
-reports/*
-!reports/.gitkeep
 
 # Temporary / Scratch
 tmp/

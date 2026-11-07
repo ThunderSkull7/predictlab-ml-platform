@@ -73,3 +73,13 @@ Certain expanded variants of the Telco dataset (e.g., IBM Cognos Analytics / Kag
 2. **Partitioning Guardrails**:
    - Out-of-fold and train-test splits must fit all transformers, encoders, and scalers **strictly on the training partition**.
    - No target statistics or aggregate properties from validation or test partitions may bleed into preprocessing steps.
+
+---
+
+## 5. Phase 2 Exploratory Leakage Verification
+
+The Phase 2 statistical profiling re-audited all 21 columns and confirmed:
+1. **Zero Post-Event Exit Artifacts**: No exit survey fields, termination codes, or customer satisfaction surveys conducted post-cancellation are present.
+2. **Contract Operational Precedence**: While Month-to-month contracts strongly associate with churn ($\chi^2 = 1184.6, V = 0.408$), contract terms are established at agreement inception, confirming they represent valid pre-event operational risk factors.
+3. **TotalCharges Accumulation**: The empirical consistency check (100% match with MonthlyCharges at `tenure == 1`, $\rho = 0.889$ with `tenure`) confirms that `TotalCharges` represents historical billed revenue to date, rather than post-cancellation accumulations.
+4. **Conclusion**: Feature sets remain free of target leakage under retrospective snapshot modeling assumptions. Setting `TotalCharges = 0.0` at `tenure == 0` in Phase 3 introduces no outcome information.
