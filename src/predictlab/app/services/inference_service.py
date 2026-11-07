@@ -121,9 +121,12 @@ def get_engine_metadata(engine: InferenceEngine) -> dict[str, Any]:
     """Extract clean summary information from the active inference engine."""
     return {
         "artifact_path": str(engine.artifact_path),
+        "artifact_sha256": engine.artifact_sha256,
         "model_name": engine.model_name,
         "calibration_method": engine.calibration_method,
         "default_threshold": engine.decision_threshold,
+        "feature_count": engine.feature_count,
+        "ensemble_size": engine.ensemble_size,
         "metadata": engine.metadata,
     }
 
