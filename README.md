@@ -46,7 +46,7 @@ PredictLab distinguishes four distinct levels of model outputs:
 - **License Status**: The host repository provides an Apache License 2.0 covering code patterns. However, no dedicated open-data license (e.g., CDLA, CC0, CC-BY) is provided for the CSV file, and IBM hosts the file as sample demonstration data for a tutorial.
 - **Redistribution Policy**: Because third-party redistribution rights cannot be conclusively established from upstream metadata alone, PredictLab distinguishes its own MIT software license from third-party sample data terms, documents this limitation, and provides an automated download and SHA-256 verification procedure in `data/README.md`.
 - **SHA-256 Checksum**: `16320c9c1ec72448db59aa0a26a0b95401046bef5d02fd3aeb906448e3055e91` (7,043 rows, 21 columns).
-- **Pending Decision on `TotalCharges`**: Exactly 11 rows contain `" "` in `TotalCharges`, coinciding strictly with `tenure == 0` and `Churn == "No"`. The raw CSV is preserved completely unmodified. The proposed `0.0` interpretation is recorded as a pending preprocessing decision to be investigated in Phase 2 and implemented in Phase 3.
+- **`TotalCharges` Preprocessing Directive**: Exactly 11 rows contain `" "` in `TotalCharges`, coinciding strictly with `tenure == 0` and `Churn == "No"`. The raw CSV is preserved completely unmodified. In Phase 3, the preprocessing pipeline will convert whitespace to `NaN`, validate that missingness strictly coincides with `tenure == 0`, and impute `0.0`.
 
 ---
 
@@ -143,6 +143,13 @@ PredictLab is developed following a rigorous 7-phase engineering plan:
   - 16 publication-grade figures generated in `reports/figures/`.
   - Executed notebooks `01_data_audit.ipynb` and `02_eda.ipynb`.
   - 34 automated unit and integration tests passing.
+- [x] **Phase 2.1: Methodological Corrections & EDA Sign-Off**
+  - Corrected cross-sectional interpretation; audited and removed survival-analysis/hazard language.
+  - Updated Figure 13 to "Cross-Sectional Churn Prevalence by Contract Across Tenure Cohorts".
+  - Designated One-Hot Encoding as default for `Contract`; documented equal-spacing assumptions of ordinal encoding.
+  - Empirically reassessed `ChargesRatio` as an experimental candidate requiring explicit zero-tenure handling.
+  - Renamed and formalized `OptionalServiceCount` across 6 internet add-on services.
+  - Clarified `TotalCharges` 0.0 imputation as a Phase 3 pipeline validation step with unmodified raw CSV.
 - [ ] **Phase 3: Preprocessing, Feature Engineering & Leakage-Free Pipeline**
 - [ ] **Phase 4: Model Exploration, Baseline Establishment & Comparison**
 - [ ] **Phase 5: Probability Calibration, Threshold Tuning & Evaluation**

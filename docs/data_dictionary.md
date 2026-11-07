@@ -46,12 +46,16 @@
 
 ---
 
-## 3. Preprocessing Recommendation: `TotalCharges` Whitespace Handling
+## 3. Preprocessing Recommendation: `TotalCharges` Whitespace Handling & Feature Directives
 
 - **Audit Findings**: Exactly 11 rows contain `" "` in `TotalCharges`. All 11 records have `tenure == 0` and `Churn == "No"` (10 on Two-year contracts, 1 on One-year contract).
 - **Integrity Status**: The raw CSV file in `data/raw/` remains completely unmodified.
 - **Empirical Proof**: For all 613 accounts with `tenure == 1`, $\text{TotalCharges} == \text{MonthlyCharges}$ ($\Delta = 0.00$), proving that TotalCharges represents accumulated completed billing cycles.
-- **Phase 2 Conclusion**: At enrollment (`tenure == 0`), accumulated billed revenue is operationally $0.00. Converting whitespace to `0.0` in Phase 3 is the recommended, domain-consistent treatment.
+- **Phase 2 Conclusion**: At enrollment (`tenure == 0`), accumulated billed revenue is operationally $0.00. In Phase 3, the preprocessing pipeline will convert whitespace to `NaN`, validate that missingness coincides exclusively with `tenure == 0` (raising an error or warning if missingness occurs for positive tenure), and impute `0.0`.
+- **Encoding & Feature Directives**:
+  - `Contract`: One-Hot Encoding is the default treatment. Ordinal encoding may be evaluated only as an alternative experiment with documented linear spacing assumptions.
+  - `OptionalServiceCount`: Renamed from `SupportBundleCount`, counting active optional services across 6 internet add-ons (`OnlineSecurity`, `OnlineBackup`, `DeviceProtection`, `TechSupport`, `StreamingTV`, `StreamingMovies`), scoring `"No internet service"` as 0.
+  - `ChargesRatio`: Retained strictly as an experimental candidate; requires explicit zero-tenure handling rather than an arbitrary epsilon.
 
 ---
 

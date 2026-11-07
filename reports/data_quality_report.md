@@ -117,6 +117,8 @@ Descriptive statistics were computed across all numerical attributes (with `Tota
 ## 5. Schema Concerns & Preprocessing Directives for Phase 3
 
 1. **`customerID` Exclusion**: Must be dropped from all modeling matrices to eliminate identifier memorization.
-2. **`TotalCharges` Conversion**: Convert whitespace entries (`" "`) to `0.0` and cast the column to `float64`.
-3. **Multicollinearity Guardrail**: Strong correlation between `tenure` and `TotalCharges` (Spearman $\rho = 0.889$) requires awareness in linear models (ridge/lasso penalty) while remaining benign for tree-based estimators.
-4. **Ternary Category Separation**: Categories like `"No internet service"` and `"No phone service"` represent structural service dependencies and must not be collapsed blindly into `"No"`.
+2. **`TotalCharges` Conversion Directive**: The canonical raw CSV remains byte-unmodified. In the Phase 3 preprocessing pipeline, parse whitespace strings (`" "`) to `NaN`, validate that missingness strictly and exclusively coincides with `tenure == 0` (raising a validation error if missing values occur for accounts with `tenure > 0`), and impute `0.0` before casting to `float64`.
+3. **`Contract` Encoding Directive**: One-Hot Encoding must be the default baseline treatment. Ordinal encoding may be evaluated only as an alternative experiment, with documented equal-spacing assumptions.
+4. **Feature Engineering Clarifications**: Feature engineering plans should implement `OptionalServiceCount` across all 6 optional services (scoring "No internet service" as 0) and treat `ChargesRatio` strictly as an experimental candidate requiring explicit zero-tenure handling rather than an arbitrary epsilon.
+5. **Multicollinearity Guardrail**: Strong correlation between `tenure` and `TotalCharges` (Spearman $\rho = 0.889$) requires awareness in linear models (ridge/lasso penalty) while remaining benign for tree-based estimators.
+6. **Ternary Category Separation**: Categories like `"No internet service"` and `"No phone service"` represent structural service dependencies and must not be collapsed blindly into `"No"`.

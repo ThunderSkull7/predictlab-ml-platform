@@ -33,13 +33,11 @@ This audit utilizes PredictLab's reusable profiling module (`predictlab.profilin
 
     nb.cells.append(
         nbf.v4.new_code_cell(
-            """import pandas as pd
-from IPython.display import display
-from predictlab.data.load import load_raw_dataset
+            """from predictlab.data.load import load_raw_dataset
 from predictlab.profiling.quality import (
-    profile_data_quality,
     detect_whitespace_entries,
     investigate_total_charges,
+    profile_data_quality,
 )
 from predictlab.profiling.summary import (
     compute_dataset_overview,
@@ -193,21 +191,13 @@ This notebook implements comprehensive exploratory analysis on the canonical Tel
     nb.cells.append(
         nbf.v4.new_code_cell(
             """from pathlib import Path
-import pandas as pd
-import numpy as np
+
 from IPython.display import Image, display
 
 from predictlab.data.load import load_raw_dataset
-from predictlab.profiling.summary import (
-    compute_numeric_summary,
-    compute_categorical_summary,
-    compute_target_distribution,
-)
 from predictlab.profiling.insights import (
-    compute_segment_churn_rates,
     compute_categorical_associations,
     compute_numerical_churn_tests,
-    compute_correlation_matrix,
 )
 from predictlab.profiling.visuals import generate_all_eda_figures
 
@@ -255,7 +245,7 @@ print(f"Generated {len(created_figs)} figures in {figures_dir.resolve()}.")"""
             r"""### Q2: How does customer tenure relate to churn?
 - **Finding**: Churn is heavily concentrated in early subscriber lifecycles.
 - **Median Tenure**: Churned accounts have a median tenure of 10.0 months, compared to 38.0 months for retained accounts ($p < 10^{-100}$).
-- **Cohort Hazard**: Customers with tenure $\le 12$ months exhibit an observed churn rate of **47.68%**, which drops to **6.61%** for customers with tenure $> 60$ months."""
+- **Observed Churn Rate by Tenure Cohort**: Customers with tenure $\le 12$ months exhibit an observed churn rate of **47.68%**, which drops to **6.61%** for customers with tenure $> 60$ months."""
         )
     )
 
@@ -386,9 +376,10 @@ display(Image(filename=str(figures_dir / "15_numeric_correlation_matrix.png")))"
         nbf.v4.new_markdown_cell(
             """### Q10: What data-quality or modelling concerns should be addressed before preprocessing?
 1. **Identifier Exclusion**: `customerID` is 100% unique and must be excluded from modeling matrices.
-2. **TotalCharges Formatting**: Convert 11 whitespace strings to `0.0` and cast to float.
+2. **TotalCharges Preprocessing Pipeline**: The canonical raw CSV remains unmodified. In Phase 3, parse whitespace to NaN, validate missingness strictly against tenure == 0, and impute 0.0 before casting to float.
 3. **Multicollinearity between Tenure and TotalCharges**: Spearman correlation of 0.889 indicates collinearity; tree models tolerate this, but regularized linear models will require attention.
-4. **Ternary Categories**: Categories like `"No internet service"` and `"No phone service"` represent service structural states distinct from `"No"` and should not be collapsed blindly."""
+4. **Ternary Categories**: Categories like `"No internet service"` and `"No phone service"` represent service structural states distinct from `"No"` and should not be collapsed blindly.
+5. **Feature Directives**: Default One-Hot encoding for `Contract` (ordinal encoding evaluated only as an alternative experiment with documented spacing assumptions); engineer `OptionalServiceCount` across all 6 internet add-ons (scoring "No internet service" as 0); treat `ChargesRatio` as an experimental candidate requiring explicit zero-tenure branching."""
         )
     )
 

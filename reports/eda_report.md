@@ -9,10 +9,10 @@ Phase 2 establishes an evidence-based understanding of the canonical IBM Telco C
 ### Core Analytical Findings
 1. **Target Distribution & Imbalance**: 26.54% of customer accounts discontinued service ($N = 1,869$), while 73.46% remained active ($N = 5,174$). The class balance ratio is 2.77:1.
 2. **Dominant Risk Factor**: **Contract structure** exhibits the strongest association with churn across all attributes (bias-corrected Cramér's $V = 0.408, \chi^2 = 1184.6, p < 10^{-200}$). Customers on Month-to-month contracts churn at **42.71%**, compared to **11.27%** for One-year contracts and **2.83%** for Two-year contracts.
-3. **Subscriber Lifecycle Hazard**: Churn is concentrated in early tenure. Customers with tenure $\le 12$ months exhibit an observed churn rate of **47.68%**. Median tenure for churned customers is **10.0 months**, compared to **38.0 months** for retained subscribers (Mann-Whitney $U = 2.45 \times 10^6, p < 10^{-100}$).
+3. **Early Tenure Churn Concentration**: Churn is heavily concentrated in early tenure cohorts. Customers with tenure $\le 12$ months exhibit an observed churn rate of **47.68%**. Median tenure for churned customers is **10.0 months**, compared to **38.0 months** for retained subscribers (Mann-Whitney $U = 2.45 \times 10^6, p < 10^{-100}$).
 4. **Service Vulnerabilities**: Fiber Optic subscribers exhibit an elevated churn rate of **41.89%** (driven by higher monthly bills averaging $91.50). In contrast, accounts with proactive support add-ons show dramatically lower attrition: **OnlineSecurity** (14.61% churn with security vs. 41.77% without) and **TechSupport** (15.17% with support vs. 41.65% without).
 5. **Payment Friction**: Customers utilizing **Electronic check** churn at **45.29%** (1.71x baseline), whereas customers enrolled in automatic payment mechanisms (Credit card auto: 15.24%; Bank transfer auto: 16.71%) exhibit low churn rates.
-6. **`TotalCharges` Anomaly Resolved**: The 11 whitespace values in `TotalCharges` strictly correspond to `tenure == 0` new signups ($Churn = No$). Evidence proves that `TotalCharges` represents accumulated billed monthly charges ($100\%$ match at tenure 1); setting whitespace to `$0.00` is the mathematically and operationally correct Phase 3 treatment.
+6. **`TotalCharges` Preprocessing Treatment Clarified**: The 11 whitespace values in `TotalCharges` strictly correspond to `tenure == 0` new signups ($Churn = No$). Evidence proves that `TotalCharges` represents accumulated billed monthly charges ($100\%$ match at tenure 1). The raw dataset remains completely unmodified; the Phase 3 preprocessing pipeline will convert whitespace to `NaN`, validate that missingness coincides exclusively with `tenure == 0`, and impute `$0.00`.
 
 ---
 
@@ -35,7 +35,7 @@ Phase 2 establishes an evidence-based understanding of the canonical IBM Telco C
   - Negative-to-Positive Ratio: **2.77:1**
 - **Visualization**: `reports/figures/01_target_distribution.png`
 - **Interpretation**: The target displays moderate class imbalance. While standard classifiers might achieve ~73.5% accuracy by trivially predicting majority class retention, such models offer zero business value. Evaluation must prioritize **PR-AUC**, **Brier score**, and cost-sensitive threshold tuning.
-- **Caveat**: The snapshot target represents customers who left within the last month of observation; it does not measure multi-month hazard rates over time.
+- **Caveat**: The dataset is a cross-sectional snapshot without event timestamps or longitudinal customer tracking. The target reflects whether a customer was recorded as having left within the last month prior to the snapshot; it does not measure multi-month temporal hazard trajectories or time-to-event dynamics.
 
 ### Q2: How does customer tenure relate to churn?
 - **Numerical Evidence**:
@@ -50,8 +50,8 @@ Phase 2 establishes an evidence-based understanding of the canonical IBM Telco C
     - 49–60 months: **14.34%** churn (120 churns / 837 customers)
     - 61–72 months: **6.61%** churn (93 churns / 1,407 customers)
 - **Visualization**: `reports/figures/03_tenure_vs_churn.png`
-- **Interpretation**: Attrition follows an exponential decay hazard profile. The first year of subscription represents the critical retention window.
-- **Caveat**: High tenure accounts carry survivorship selection bias; long-tenured customers have already survived early onboarding hazards.
+- **Interpretation**: Observed churn rates decline monotonically across higher tenure cohorts (cross-sectional prevalence drops from 47.68% in the 0–12 month cohort down to 6.61% for accounts with tenure > 60 months). Early tenure cohorts represent the segments with the highest observed churn prevalence.
+- **Caveat**: High-tenure accounts carry survivorship selection bias: customers observed in long-tenure cohorts represent accounts that remained active over time, whereas churned accounts departed earlier. Because the dataset lacks longitudinal event timestamps and historical customer tracking, this data cannot support survival analysis or estimate dynamic hazard functions.
 
 ### Q3: How do contract types differ in their observed churn rates?
 - **Numerical Evidence**:
@@ -59,8 +59,8 @@ Phase 2 establishes an evidence-based understanding of the canonical IBM Telco C
   - **One year**: 1,473 customers (20.9% of cohort); 166 churned (**11.27%** churn rate; Relative Risk = **0.42x**).
   - **Two year**: 1,695 customers (24.1% of cohort); 48 churned (**2.83%** churn rate; Relative Risk = **0.11x**).
   - $\chi^2 = 1184.6, \text{dof} = 2, p < 10^{-200}$; Bias-corrected Cramér's $V = 0.408$.
-- **Visualization**: `reports/figures/06_churn_by_contract.png`
-- **Interpretation**: Contract length is the most powerful descriptive discriminator in the dataset. Month-to-month accounts provide zero switching friction, enabling rapid departure when dissatisfied.
+- **Visualizations**: `reports/figures/06_churn_by_contract.png`, `reports/figures/13_multivariate_contract_and_tenure.png` ("Cross-Sectional Churn Prevalence by Contract Across Tenure Cohorts").
+- **Interpretation**: Contract length is the most powerful descriptive discriminator in the dataset. Month-to-month accounts provide zero switching friction, enabling rapid departure when dissatisfied. Even across tenure cohorts, month-to-month subscribers consistently exhibit elevated churn rates relative to annual contracts.
 - **Caveat**: Association is not causation. Forcing customer cohorts onto two-year contracts will not automatically reduce churn to 2.8% without addressing underlying pricing or service satisfaction.
 
 ### Q4: What relationship exists between MonthlyCharges and churn?
@@ -117,7 +117,7 @@ Phase 2 establishes an evidence-based understanding of the canonical IBM Telco C
   - For all 613 customers with `tenure == 1`, $\text{TotalCharges} == \text{MonthlyCharges}$ ($\Delta = 0.000$ across all 613 records).
   - Exactly 11 records have whitespace in `TotalCharges`. All 11 have `tenure == 0` (10 on Two-year contracts, 1 on One-year contract; all `Churn == "No"`).
 - **Visualization**: `reports/figures/14_total_charges_tenure_investigation.png`
-- **Recommendation**: Impute `0.0` in Phase 3. This reflects the true physical and accounting reality: brand-new subscribers at month 0 have accumulated $0.00 in billed charges.
+- **Recommendation**: The raw CSV file remains strictly unmodified. In the Phase 3 preprocessing pipeline, parse whitespace strings in `TotalCharges` to `NaN`, validate that missingness coincides exclusively with `tenure == 0` (raising an error or warning if missingness occurs for positive tenure), and impute `0.0` before casting to `float64`. This reflects domain accounting reality: newly signed subscribers at tenure 0 have accumulated $0.00 in billed charges.
 
 ### Q9: Which features show the strongest descriptive associations with churn?
 - **Categorical Hierarchy (Bias-Corrected Cramér's V)**:
@@ -205,14 +205,39 @@ Using multivariate cross-tabulations, we identified segments exhibiting extreme 
 
 ## 6. Recommendations for Phase 3 Preprocessing
 
-1. **Missing Data Handling**: Transform the 11 whitespace strings in `TotalCharges` into `0.0` and cast to `float64`.
-2. **Feature Transformation**:
-   - `customerID`: Drop from modeling matrices.
-   - Categorical Features: Apply One-Hot Encoding for nominal variables (`PaymentMethod`, `InternetService`).
-   - Contract: Evaluate Ordinal Encoding (`Month-to-month`: 0, `One year`: 1, `Two year`: 2) as well as One-Hot.
-   - Numerical Scaling: RobustScaler or StandardScaler for distance-based estimators.
-3. **Feature Engineering Opportunities**:
-   - `ChargesRatio`: $\text{TotalCharges} / (\text{tenure} \times \text{MonthlyCharges} + 1e-4)$ to detect billing rate changes.
-   - `SupportBundleCount`: Integer count of active security/support add-ons ($0$ to $6$).
-   - `AutoPaymentFlag`: Binary indicator (1 if Bank transfer auto or Credit card auto, 0 otherwise).
-4. **Validation Guardrail**: Fit all transformers strictly on training partitions to prevent data leakage.
+1. **Missing Data Handling**:
+   - The canonical raw CSV remains 100% byte-unmodified.
+   - In the Phase 3 preprocessing pipeline, replace whitespace strings (`" "`) in `TotalCharges` with `NaN`.
+   - Enforce a strict validation check: verify that all missing values occur exclusively where `tenure == 0`. If missingness appears for accounts with `tenure > 0`, raise an explicit validation error or logged warning.
+   - Impute `0.0` for all zero-tenure missing rows and cast the column to `float64`.
+
+2. **Categorical Feature Encoding**:
+   - `customerID`: Drop from all modeling matrices to eliminate identifier memorization.
+   - **`Contract`**: **One-Hot Encoding is the designated default treatment** (`Contract_Month-to-month`, `Contract_One year`, `Contract_Two year`). Ordinal encoding (`Month-to-month`: 0, `One year`: 1, `Two year`: 2) may be explored as an alternative experimental candidate, but must not serve as the baseline because it artificially imposes an integer order and an equal-interval assumption (assuming the step from month-to-month to 1-year is equivalent to 1-year to 2-year). Contract duration must not automatically be treated as a linear numerical attribute.
+   - Nominal Categoricals: Apply standard One-Hot Encoding across nominal variables (`PaymentMethod`, `InternetService`, `PhoneService`, `MultipleLines`, `PaperlessBilling`, etc.). Preserve distinct structural categories (e.g., `"No internet service"`, `"No phone service"`) rather than conflating them with `"No"`.
+
+3. **Numerical Scaling**:
+   - RobustScaler or StandardScaler for continuous numerical features (`tenure`, `MonthlyCharges`, `TotalCharges`) when fitting distance-based or regularized linear estimators.
+
+4. **Feature Engineering Opportunities & Reassessment**:
+   - **`OptionalServiceCount`** (renamed from `SupportBundleCount`):
+     - Integer count ($0$ to $6$) measuring the total number of optional internet add-on services subscribed by the customer across:
+       1. `OnlineSecurity`
+       2. `OnlineBackup`
+       3. `DeviceProtection`
+       4. `TechSupport`
+       5. `StreamingTV`
+       6. `StreamingMovies`
+     - Handling of `"No internet service"`: Customers without internet service cannot subscribe to internet add-ons. Their status is scored as $0$ (not missing/null).
+     - Sub-aggregation options: In Phase 3, protection add-ons (`OnlineSecurity`, `OnlineBackup`, `DeviceProtection`, `TechSupport` — count 0 to 4) can be evaluated separately from entertainment streaming add-ons (`StreamingTV`, `StreamingMovies` — count 0 to 2) to capture distinct customer engagement profiles.
+   - **`ChargesRatio` Reassessment (Experimental Feature Only)**:
+     - Formula: $\text{TotalCharges} / (\text{tenure} \times \text{MonthlyCharges})$.
+     - Empirical audit: Across valid accounts ($tenure > 0$), the ratio is tightly concentrated around $1.0000$ (mean: $1.0003$, std: $0.0512$, median: $1.0000$, IQR: $0.0401$; $80.4\%$ of accounts fall within $\pm 5\%$ of $1.0$).
+     - Numerical instability: At $tenure = 0$, both numerator and denominator evaluate to zero. Adding an arbitrary epsilon ($1e-4$) creates severe numerical distortion and artificial values ($0 / 1e-4 = 0.0$). If computed, it requires an explicit conditional branch assigning $ChargesRatio = 1.0$ for $tenure == 0$.
+     - Conceptual assessment: `TotalCharges` is approximately cumulative historical billing, whereas `MonthlyCharges` reflects the current snapshot billing rate. The ratio captures historical price changes, plan adjustments, or promotional discounts, but does not isolate clean billing rate trends without dated billing histories.
+     - Decision: **Exclude from the default baseline feature set**. Retain strictly as an **experimental feature candidate** to be evaluated comparatively in subsequent modeling phases.
+   - **`AutoPaymentFlag`**: Binary indicator ($1$ if `PaymentMethod` is `"Bank transfer (automatic)"` or `"Credit card (automatic)"`, $0$ otherwise).
+
+5. **Validation Guardrails**:
+   - Cross-sectional interpretation integrity: Maintain clear framing that models perform retrospective risk ranking and classification, not temporal future forecasting.
+   - Strict data-split hygiene: All scalers, imputers, and encoders must be fitted strictly on training partitions to prevent data leakage.

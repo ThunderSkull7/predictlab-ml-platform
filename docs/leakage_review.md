@@ -35,7 +35,7 @@ Because observation timestamps ($T_0$) and outcome realization horizons ($\Delta
 ### C. Account Duration: `tenure`
 - **Assessment**: Valid Cross-Sectional Attribute.
 - **Audit Findings**: Discrete integer between 0 and 72 months.
-- **Analysis**: Tenure measures account duration up to the observation snapshot. While tenure strongly associates with churn rate (highest attrition in months 1–6), it is an active customer state variable, not an outcome consequence. Note that survivorship bias exists: high-tenure accounts have survived early hazard windows.
+- **Analysis**: Tenure measures account duration up to the observation snapshot. While tenure strongly associates with churn rate (highest attrition observed in early tenure cohorts), it is an active customer state variable, not an outcome consequence. Note that cross-sectional survivorship bias exists: long-tenured accounts in this snapshot have remained active across early tenures without churning. Because the dataset lacks longitudinal event timestamps, it does not support dynamic hazard analysis.
 
 ### D. Contractual Terms: `Contract`, `PaperlessBilling`, `PaymentMethod`
 - **Assessment**: No Target Leakage (Valid Structural Features).

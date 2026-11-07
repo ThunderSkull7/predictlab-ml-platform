@@ -314,7 +314,7 @@ def generate_all_eda_figures(df: pd.DataFrame, output_dir: Path | str) -> list[P
     ct_pivot = ct_rates.pivot(index="tenure_group", columns="Contract", values="churn_rate_pct")
     ct_pivot.plot(kind="line", marker="o", linewidth=2.5, ax=ax, color=["#EF4444", "#3B82F6", "#10B981"])
     ax.axhline(26.54, color="gray", linestyle="--", label="Overall Baseline (26.5%)")
-    ax.set_title("Multivariate Interaction: Churn Trajectory by Contract Across Tenure Cohorts")
+    ax.set_title("Cross-Sectional Churn Prevalence by Contract Across Tenure Cohorts")
     ax.set_ylabel("Churn Rate (%)")
     ax.set_xlabel("Tenure Cohort")
     ax.set_ylim(0, 65)
