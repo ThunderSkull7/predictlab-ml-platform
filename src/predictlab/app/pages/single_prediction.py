@@ -181,30 +181,29 @@ def render_single_prediction_page() -> None:
         )
 
     # 2. Prediction Execution & Output Rendering
-    if submit_btn:
-        # Build raw predictor payload
-        record_payload = {
-            "gender": gender,
-            "SeniorCitizen": int(senior),
-            "Partner": partner,
-            "Dependents": dependents,
-            "tenure": int(tenure),
-            "PhoneService": phone_service,
-            "MultipleLines": multiple_lines,
-            "InternetService": internet_service,
-            "OnlineSecurity": online_security,
-            "OnlineBackup": online_backup,
-            "DeviceProtection": device_protection,
-            "TechSupport": tech_support,
-            "StreamingTV": streaming_tv,
-            "StreamingMovies": streaming_movies,
-            "Contract": contract,
-            "PaperlessBilling": paperless,
-            "PaymentMethod": payment_method,
-            "MonthlyCharges": float(monthly_charges),
-            "TotalCharges": " " if (tenure == 0 and total_charges == 0.0) else float(total_charges),
-        }
+    record_payload = {
+        "gender": gender,
+        "SeniorCitizen": int(senior),
+        "Partner": partner,
+        "Dependents": dependents,
+        "tenure": int(tenure),
+        "PhoneService": phone_service,
+        "MultipleLines": multiple_lines,
+        "InternetService": internet_service,
+        "OnlineSecurity": online_security,
+        "OnlineBackup": online_backup,
+        "DeviceProtection": device_protection,
+        "TechSupport": tech_support,
+        "StreamingTV": streaming_tv,
+        "StreamingMovies": streaming_movies,
+        "Contract": contract,
+        "PaperlessBilling": paperless,
+        "PaymentMethod": payment_method,
+        "MonthlyCharges": float(monthly_charges),
+        "TotalCharges": " " if (tenure == 0 and total_charges == 0.0) else float(total_charges),
+    }
 
+    if submit_btn:
         try:
             with st.spinner("Executing calibrated inference and TreeSHAP attributions..."):
                 res = run_single_prediction(
@@ -213,13 +212,28 @@ def render_single_prediction_page() -> None:
                     threshold=applied_threshold,
                     include_explanation=True,
                 )
+                st.session_state["single_pred_result"] = res
         except InferenceValidationError as val_err:
             st.error(f"Input Validation Error: {val_err}")
             return
         except Exception as pred_err:
             st.error(f"Inference Execution Error: {pred_err}")
             return
+    elif "single_pred_result" not in st.session_state:
+        # Pre-compute initial prediction for default preset so UI displays complete completed state
+        try:
+            res = run_single_prediction(
+                engine=engine,
+                record=record_payload,
+                threshold=applied_threshold,
+                include_explanation=True,
+            )
+            st.session_state["single_pred_result"] = res
+        except Exception:
+            pass
 
+    res = st.session_state.get("single_pred_result")
+    if res is not None:
         st.markdown('<div class="section-header"><h3>3. Inference & Risk Classification Results</h3></div>', unsafe_allow_html=True)
 
         # KPI Output Tiles

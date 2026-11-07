@@ -44,14 +44,22 @@ def render_batch_analysis_page() -> None:
         )
     with tcol2:
         sample_csv = generate_sample_batch_csv(include_invalid=True)
-        st.download_button(
-            label="📥 Download Sample Batch CSV",
-            data=sample_csv,
-            file_name="predictlab_sample_batch.csv",
-            mime="text/csv",
-            help="Download a formatted sample CSV containing 5 valid customer records and 1 invalid record for testing.",
-            use_container_width=True,
-        )
+        bc1, bc2 = st.columns(2)
+        with bc1:
+            st.download_button(
+                label="📥 Download CSV",
+                data=sample_csv,
+                file_name="predictlab_sample_batch.csv",
+                mime="text/csv",
+                help="Download sample CSV containing 5 valid customer records and 1 invalid record.",
+                use_container_width=True,
+            )
+        with bc2:
+            load_sample = st.button(
+                "🚀 Score Sample Cohort",
+                help="Directly score the 6 sample customer records without uploading a file.",
+                use_container_width=True,
+            )
 
     # File Uploader
     uploaded_file = st.file_uploader(
@@ -77,18 +85,30 @@ def render_batch_analysis_page() -> None:
             "Accounts with model-estimated churn probability ≥ threshold will be classified as 'Flagged by Current Policy'."
         )
 
-    if uploaded_file is None:
-        st.info("Upload a customer CSV above or click 'Download Sample Batch CSV' to get started.")
+    # Resolve batch input source
+    batch_data = None
+    batch_name = ""
+    if uploaded_file is not None:
+        batch_data = uploaded_file
+        batch_name = uploaded_file.name
+        st.session_state["batch_source"] = "uploaded"
+    elif load_sample or st.session_state.get("batch_source") == "sample" or "batch_source" not in st.session_state:
+        batch_data = io.StringIO(sample_csv)
+        batch_name = "predictlab_sample_batch.csv (Demo Cohort)"
+        st.session_state["batch_source"] = "sample"
+
+    if batch_data is None:
+        st.info("Upload a customer CSV above or click 'Score Sample Cohort' to get started.")
         return
 
     # 2. Parse & Validate CSV via service
-    df_raw, parse_err = validate_and_parse_batch_csv(uploaded_file)
+    df_raw, parse_err = validate_and_parse_batch_csv(batch_data)
     if parse_err is not None or df_raw is None:
         st.error(parse_err)
         return
 
     n_raw = len(df_raw)
-    st.success(f"File loaded successfully: **{uploaded_file.name}** ({n_raw:,} records)")
+    st.success(f"Cohort loaded successfully: **{batch_name}** ({n_raw:,} records)")
 
     # 3. Execute Vectorized Batch Inference
     with st.spinner(f"Scoring {n_raw:,} records via vectorized calibrated pipeline..."):
