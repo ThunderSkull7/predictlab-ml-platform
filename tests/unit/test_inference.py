@@ -1,5 +1,6 @@
 """Unit tests for production inference engine, schema validation, and batch processing."""
 
+import hashlib
 import shutil
 from pathlib import Path
 
@@ -253,7 +254,7 @@ def test_artifact_checksum_mismatch_fails_before_deserialization(
     # Spy on joblib.load to verify it is NEVER called when checksum fails
     load_called = False
 
-    def mock_load(path: Path) -> dict:
+    def mock_load(source: object) -> dict:
         nonlocal load_called
         load_called = True
         return {}
@@ -264,6 +265,98 @@ def test_artifact_checksum_mismatch_fails_before_deserialization(
         InferenceEngine(model_artifact_path=tampered_file)
 
     assert not load_called, "joblib.load() was invoked despite checksum mismatch!"
+
+
+def test_deserialization_uses_verified_in_memory_bytes_eliminating_toctou(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Requirement 1: Deserialization receives the verified in-memory bytes and cannot load a subsequently replaced file."""
+    real_artifact = get_settings().artifacts_dir / "model_phase5_calibrated.joblib"
+    test_artifact = tmp_path / "model_phase5_calibrated.joblib"
+    shutil.copy(real_artifact, test_artifact)
+
+    # Intercept Path.read_bytes on test_artifact: after reading valid bytes, overwrite the file on disk!
+    original_read_bytes = Path.read_bytes
+
+    def read_bytes_and_tamper_file(path_self: Path) -> bytes:
+        content = original_read_bytes(path_self)
+        if path_self.name == "model_phase5_calibrated.joblib":
+            # Overwrite the file on disk with garbage
+            path_self.write_bytes(b"MALICIOUS_REPLACED_FILE_CONTENT_AFTER_CHECK")
+        return content
+
+    monkeypatch.setattr(Path, "read_bytes", read_bytes_and_tamper_file)
+
+    # InferenceEngine should successfully load because it deserializes the verified in-memory bytes
+    engine = InferenceEngine(model_artifact_path=test_artifact)
+    assert engine.artifact_sha256 == "b773eb58e59825c8cef7169c4166566ebddfa77b5e584853ac492dafc5dd0963"
+    assert engine.calibration_method == "sigmoid"
+    assert engine.feature_count == 47
+
+    # Verify that the file on disk was indeed replaced with corrupt data
+    assert original_read_bytes(test_artifact) == b"MALICIOUS_REPLACED_FILE_CONTENT_AFTER_CHECK"
+
+
+def test_production_rejects_environment_checksum_override(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Requirement 2: Production mode strictly rejects environment variable checksum override."""
+    fake_settings = get_settings().model_copy(
+        update={"canonical_model_sha256": "0000000000000000000000000000000000000000000000000000000000000000"}
+    )
+    monkeypatch.setattr("predictlab.inference.engine.get_settings", lambda: fake_settings)
+
+    with pytest.raises(ModelArtifactError, match="Environment checksum override .* is rejected in production mode"):
+        InferenceEngine()
+
+
+def test_development_override_works_only_when_explicitly_enabled(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Requirement 2: Custom checksum override works only when allow_development_fallback=True."""
+    mock_file = tmp_path / "model_phase5_calibrated.joblib"
+    joblib.dump(
+        {
+            "pipeline": _MockEstimatorWithProba(),
+            "metadata": {
+                "calibration_method": "sigmoid",
+                "feature_count": 47,
+                "feature_names": [f"f{i}" for i in range(47)],
+                "decision_threshold": 0.19,
+            },
+        },
+        mock_file,
+    )
+    custom_sha = hashlib.sha256(mock_file.read_bytes()).hexdigest()
+
+    # 1. In production mode (allow_development_fallback=False): explicit override is rejected
+    with pytest.raises(ModelArtifactError, match="Explicit checksum override is rejected in production mode"):
+        InferenceEngine(
+            model_artifact_path=mock_file,
+            expected_sha256=custom_sha,
+            allow_development_fallback=False,
+            require_calibrated=False,
+        )
+
+    # 2. In development mode (allow_development_fallback=True): explicit override is accepted
+    dev_engine = InferenceEngine(
+        model_artifact_path=mock_file,
+        expected_sha256=custom_sha,
+        allow_development_fallback=True,
+        require_calibrated=False,
+    )
+    assert dev_engine.artifact_sha256 == custom_sha
+
+
+def test_missing_production_checksum_fails_closed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Requirement 2: Missing or invalid production checksum constant fails closed."""
+    monkeypatch.setattr("predictlab.inference.engine.CANONICAL_ARTIFACT_SHA256", "")
+    with pytest.raises(ModelArtifactError, match="Trusted production checksum is missing or invalid"):
+        InferenceEngine()
 
 
 def test_uncalibrated_model_joblib_not_loaded_when_canonical_missing(

@@ -1,6 +1,7 @@
 """Production-ready inference engine for single and batch customer churn predictions."""
 
 import hashlib
+import io
 from pathlib import Path
 from typing import Any, Literal
 
@@ -85,6 +86,7 @@ class InferenceEngine:
             self._artifact_path,
             require_calibrated=require_calibrated,
             expected_sha256=expected_sha256,
+            allow_development_fallback=allow_development_fallback,
         )
 
         # Set decision threshold
@@ -175,8 +177,15 @@ class InferenceEngine:
         path: Path,
         require_calibrated: bool = True,
         expected_sha256: str | None = None,
+        allow_development_fallback: bool = False,
     ) -> tuple[Any, dict[str, Any], str]:
         """Load joblib bundle, compute checksum, and perform rigorous structural validation.
+
+        Guarantees:
+        - Exact verified bytes are deserialized via io.BytesIO(artifact_bytes) (no TOCTOU gap).
+        - Production mode strictly enforces pinned CANONICAL_ARTIFACT_SHA256 and rejects
+          environment variable overrides.
+        - Checksum mismatches are rejected before deserialization.
 
         Parameters
         ----------
@@ -186,6 +195,8 @@ class InferenceEngine:
             Whether to enforce strict calibrated ensemble constraints.
         expected_sha256 : str | None, optional
             Expected SHA-256 checksum to strictly enforce before deserialization.
+        allow_development_fallback : bool, default=False
+            Whether development-mode overrides are authorized.
 
         Returns
         -------
@@ -206,12 +217,54 @@ class InferenceEngine:
                 f"Failed to read model artifact '{path.name}' for checksum verification: {err}"
             ) from err
 
-        # 2. Strict Checksum Verification BEFORE Deserialization
-        target_sha256 = expected_sha256
-        if target_sha256 is None and path.name == CANONICAL_ARTIFACT_FILENAME:
-            settings = get_settings()
-            target_sha256 = getattr(settings, "canonical_model_sha256", CANONICAL_ARTIFACT_SHA256)
+        # 2. Strict Checksum Verification & Trust Policy Resolution BEFORE Deserialization
+        if path.name == CANONICAL_ARTIFACT_FILENAME:
+            # Validate pinned production checksum constant integrity
+            if (
+                not CANONICAL_ARTIFACT_SHA256
+                or not isinstance(CANONICAL_ARTIFACT_SHA256, str)
+                or len(CANONICAL_ARTIFACT_SHA256) != 64
+            ):
+                raise ModelArtifactError(
+                    "Trusted production checksum is missing or invalid. Production inference fails closed."
+                )
 
+            settings = get_settings()
+            env_override = getattr(settings, "canonical_model_sha256", None)
+
+            if not allow_development_fallback:
+                # Production Mode: strictly enforce pinned trusted checksum
+                if (
+                    env_override is not None
+                    and env_override.lower() != CANONICAL_ARTIFACT_SHA256.lower()
+                ):
+                    raise ModelArtifactError(
+                        "Environment checksum override ('PREDICTLAB_CANONICAL_MODEL_SHA256') is "
+                        "rejected in production mode. Production strictly enforces the pinned "
+                        "trusted checksum. Enable allow_development_fallback=True for development testing."
+                    )
+                if (
+                    expected_sha256 is not None
+                    and expected_sha256.lower() != CANONICAL_ARTIFACT_SHA256.lower()
+                ):
+                    raise ModelArtifactError(
+                        "Explicit checksum override is rejected in production mode. "
+                        "Production strictly enforces the pinned trusted checksum."
+                    )
+                target_sha256 = CANONICAL_ARTIFACT_SHA256
+            else:
+                # Development Mode: explicit opt-in allows override with prominent warning
+                target_sha256 = expected_sha256 or env_override or CANONICAL_ARTIFACT_SHA256
+                if target_sha256.lower() != CANONICAL_ARTIFACT_SHA256.lower():
+                    logger.warning(
+                        "DEVELOPMENT OVERRIDE: Using non-production checksum '%s' under allow_development_fallback=True.",
+                        target_sha256,
+                    )
+        else:
+            # Custom / non-canonical artifact path
+            target_sha256 = expected_sha256
+
+        # Enforce checksum mismatch rejection
         if target_sha256 is not None:
             if sha256_hash.lower() != target_sha256.lower():
                 raise ModelArtifactError(
@@ -220,9 +273,9 @@ class InferenceEngine:
                     "Refusing to deserialize unverified or tampered model artifact."
                 )
 
-        # 3. Safe Deserialization (Only reached after checksum verification succeeds)
+        # 3. Safe In-Memory Deserialization (TOCTOU-free: exact verified bytes)
         try:
-            bundle = joblib.load(path)
+            bundle = joblib.load(io.BytesIO(artifact_bytes))
         except Exception as err:
             raise ModelArtifactError(
                 f"Failed to deserialize model artifact '{path.name}': {err}"
