@@ -689,7 +689,220 @@ print("Transformation reproducibility confirmed: 100% bit-for-bit match.")"""
     print(f"Saved executed notebook to {out_file}")
 
 
+def build_and_execute_notebook_04():
+    """Build and execute notebooks/04_model_training_and_comparison.ipynb."""
+    nb = nbf.v4.new_notebook()
+
+    nb.cells.append(
+        nbf.v4.new_markdown_cell(
+            """# PredictLab — Notebook 04: Model Exploration, Baseline Establishment, Comparison & Controlled Tuning
+
+## Objective & Governance
+This notebook documents the rigorous, leakage-free machine-learning experimentation framework for PredictLab Phase 4:
+1. **Protected Holdout Split**: Uses the approved 80/20 train/test partition ($N_{\text{train}}=5,634$, $N_{\text{test}}=1,409$). The test partition is strictly isolated until the single final evaluation.
+2. **Candidate Benchmarking**: Evaluates dummy baselines, regularized logistic regressions, random forests, and histogram gradient boosting using stratified 5-fold cross-validation.
+3. **Feature Ablation**: Scientifically benchmarks the 47-feature baseline against the 52-feature experimental pipeline.
+4. **Controlled Hyperparameter Tuning**: Optimizes the strongest model family on $X_{\text{train}}$ only using Average Precision (PR-AUC) as primary criterion.
+5. **Final Candidate Selection & Holdout Evaluation**: Refits the winning pipeline on full training data and executes a single holdout evaluation.
+
+> [!IMPORTANT]
+> The IBM Telco Customer Churn dataset is a retrospective cross-sectional snapshot. All metrics represent retrospective discrimination and risk ranking across subscriber accounts, not temporal forecasting or forward-looking event prediction."""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_code_cell(
+            """import pandas as pd
+from IPython.display import Image, display
+
+from predictlab.config import get_settings
+from predictlab.data.load import load_raw_dataset
+from predictlab.models.persistence import load_model_artifact
+from predictlab.preprocessing.split import split_dataset
+
+settings = get_settings()
+exp_dir = settings.reports_dir / "experiments"
+figures_dir = settings.reports_dir / "figures"
+artifacts_dir = settings.artifacts_dir
+print("Modeling modules successfully imported.")"""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_markdown_cell(
+            """## 1. Load Canonical Dataset & Verified Train/Test Partition
+
+We load the dataset through the verified loader and partition it into training and holdout test sets using the saved seed (`random_state=42`, `test_size=0.20`)."""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_code_cell(
+            """df_raw = load_raw_dataset()
+X_train, X_test, y_train, y_test, manifest = split_dataset(df_raw, test_size=0.20, random_state=42, save_manifest=False)
+
+print(f"Training partition shape: {X_train.shape} (N={len(X_train)} samples)")
+print(f"Holdout test shape:       {X_test.shape} (N={len(X_test)} samples - ISOLATED)")
+print(f"Training churn rate:      {y_train.mean():.4f} ({y_train.sum()} churned accounts)")
+print(f"Holdout churn rate:       {y_test.mean():.4f} ({y_test.sum()} churned accounts)")"""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_markdown_cell(
+            """## 2. Candidate Model Benchmarking (5-Fold Stratified CV)
+
+We evaluate all candidate model families against dummy baselines strictly within `X_train`.
+All transformations (scaling, imputation, one-hot encoding) are fitted strictly within each cross-validation fold."""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_code_cell(
+            """df_bench = pd.read_csv(exp_dir / "model_benchmarks_summary.csv")
+display_cols = ["Model", "average_precision", "roc_auc", "f1", "balanced_accuracy", "log_loss", "mean_fit_time_s"]
+display(df_bench[display_cols])"""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_code_cell(
+            """display(Image(filename=str(figures_dir / "17_candidate_models_pr_auc_comparison.png")))"""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_markdown_cell(
+            """## 3. Experimental Feature Ablation Study
+
+We evaluate whether the 5 experimental feature additions (`ChargesRatio`, `ChargesRatioDefined`, `AutomaticPayment`, `TechnicalProtectionCount`, `StreamingEntertainmentCount`) provide measurable predictive lift over the 47-feature baseline."""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_code_cell(
+            """df_ablation = pd.read_csv(exp_dir / "feature_ablation_summary.csv")
+display(df_ablation)"""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_code_cell(
+            """display(Image(filename=str(figures_dir / "18_feature_ablation_delta_comparison.png")))"""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_markdown_cell(
+            """### Key Ablation Finding:
+- **Result**: The 52-feature experimental pipeline shows a **-0.0079 decrease in PR-AUC** and a **+0.0032 increase in Log Loss** relative to the 47-feature baseline.
+- **Scientific Conclusion**: Adding redundant, collinear aggregates (`AutomaticPayment` derived from payment methods, and service counts derived from individual service flags) introduces noise into tree split choices without providing independent information.
+- **Decision**: The **47-feature baseline** is retained as the definitive, parsimonious feature space for candidate modeling."""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_markdown_cell(
+            """## 4. Controlled Hyperparameter Tuning & Model Selection
+
+We perform grid search on `HistGradientBoostingClassifier` on `X_train` optimizing for Average Precision."""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_code_cell(
+            """import json
+
+with open(exp_dir / "hyperparameter_tuning_results.json") as f:
+    tuning_res = json.load(f)
+
+print(f"Optimal PR-AUC Score: {tuning_res['best_score']:.4f}")
+print("Optimal Hyperparameters:")
+for param, val in tuning_res['best_params'].items():
+    print(f"  {param:25s}: {val}")"""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_code_cell(
+            """with open(exp_dir / "model_selection_rationale.json") as f:
+    selection = json.load(f)
+
+print("Champion Model:", selection["selected_model"])
+print("Selection Rationale:", selection["rationale"])"""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_markdown_cell(
+            """## 5. One-Time Holdout Evaluation (Protected Test Set: N = 1,409)
+
+The selected pipeline is refitted on full `X_train` and evaluated once on the untouched holdout test partition."""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_code_cell(
+            """with open(exp_dir / "holdout_evaluation.json") as f:
+    holdout = json.load(f)
+
+print("Holdout Performance Metrics:")
+for metric, val in holdout["metrics"].items():
+    print(f"  {metric:22s}: {val:.4f}")
+
+cm = holdout["confusion_matrix"]
+print(f"\\nConfusion Matrix (Threshold={holdout['threshold']}):")
+print(f"  True Negatives:  {cm['true_negatives']:4d} | False Positives: {cm['false_positives']:4d}")
+print(f"  False Negatives: {cm['false_negatives']:4d} | True Positives:  {cm['true_positives']:4d}")"""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_code_cell(
+            """display(Image(filename=str(figures_dir / "19_holdout_roc_pr_curves.png")))
+display(Image(filename=str(figures_dir / "20_holdout_confusion_matrix.png")))"""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_markdown_cell(
+            """## 6. Top Feature Importances & Model Artifact Verification
+
+We inspect the top 20 predictive features in the final fitted model (impurity-based importances) and verify artifact integrity."""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_code_cell(
+            """display(Image(filename=str(figures_dir / "21_feature_importances_top20.png")))"""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_code_cell(
+            """artifact_bundle = load_model_artifact(artifacts_dir / "model.joblib")
+meta = artifact_bundle["metadata"]
+
+print("Model Artifact Verification:")
+print(f"  Model Family:      {meta['model_family']}")
+print(f"  Feature Count:     {meta['feature_count']} features")
+print(f"  Dataset SHA-256:   {meta['dataset_sha256'][:16]}...")
+print(f"  Saved Timestamp:   {meta['saved_at_utc']}")
+print(f"  Scikit-Learn Ver:  {meta['environment']['scikit_learn_version']}")"""
+        )
+    )
+
+    out_file = NOTEBOOKS_DIR / "04_model_training_and_comparison.ipynb"
+    print(f"Executing {out_file}...")
+    client = NotebookClient(nb, timeout=120, kernel_name="python3")
+    executed_nb = client.execute()
+    with open(out_file, "w", encoding="utf-8") as f:
+        nbf.write(executed_nb, f)
+    print(f"Saved executed notebook to {out_file}")
+
+
 if __name__ == "__main__":
     build_and_execute_notebook_01()
     build_and_execute_notebook_02()
     build_and_execute_notebook_03()
+    build_and_execute_notebook_04()

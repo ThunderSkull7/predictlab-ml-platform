@@ -1,0 +1,162 @@
+{
+  "model_name": "Hist Gradient Boosting",
+  "best_params": {
+    "l2_regularization": 5.0,
+    "learning_rate": 0.03,
+    "max_iter": 150,
+    "max_leaf_nodes": 15,
+    "min_samples_leaf": 40
+  },
+  "best_score": 0.6683557644343672,
+  "scoring_metric": "average_precision",
+  "search_space": {
+    "learning_rate": [
+      0.03,
+      0.05,
+      0.08
+    ],
+    "max_iter": [
+      100,
+      150,
+      200
+    ],
+    "max_leaf_nodes": [
+      15,
+      31
+    ],
+    "min_samples_leaf": [
+      20,
+      40
+    ],
+    "l2_regularization": [
+      0.1,
+      1.0,
+      5.0
+    ]
+  },
+  "search_type": "grid",
+  "n_candidates_evaluated": 108,
+  "search_duration_s": 33.690953700002865,
+  "cv_summary_table": [
+    {
+      "params": {
+        "classifier__l2_regularization": 5.0,
+        "classifier__learning_rate": 0.03,
+        "classifier__max_iter": 150,
+        "classifier__max_leaf_nodes": 15,
+        "classifier__min_samples_leaf": 40
+      },
+      "mean_test_score": 0.6683557644343672,
+      "std_test_score": 0.019462143894607178,
+      "rank_test_score": 1
+    },
+    {
+      "params": {
+        "classifier__l2_regularization": 5.0,
+        "classifier__learning_rate": 0.05,
+        "classifier__max_iter": 200,
+        "classifier__max_leaf_nodes": 15,
+        "classifier__min_samples_leaf": 40
+      },
+      "mean_test_score": 0.6671989505614995,
+      "std_test_score": 0.019124418335902053,
+      "rank_test_score": 2
+    },
+    {
+      "params": {
+        "classifier__l2_regularization": 5.0,
+        "classifier__learning_rate": 0.03,
+        "classifier__max_iter": 150,
+        "classifier__max_leaf_nodes": 15,
+        "classifier__min_samples_leaf": 20
+      },
+      "mean_test_score": 0.6670566139697222,
+      "std_test_score": 0.02148375055134784,
+      "rank_test_score": 3
+    },
+    {
+      "params": {
+        "classifier__l2_regularization": 5.0,
+        "classifier__learning_rate": 0.05,
+        "classifier__max_iter": 150,
+        "classifier__max_leaf_nodes": 15,
+        "classifier__min_samples_leaf": 40
+      },
+      "mean_test_score": 0.6668902447964975,
+      "std_test_score": 0.0189328367274209,
+      "rank_test_score": 4
+    },
+    {
+      "params": {
+        "classifier__l2_regularization": 5.0,
+        "classifier__learning_rate": 0.05,
+        "classifier__max_iter": 100,
+        "classifier__max_leaf_nodes": 15,
+        "classifier__min_samples_leaf": 40
+      },
+      "mean_test_score": 0.6668210550218481,
+      "std_test_score": 0.020340448268531586,
+      "rank_test_score": 5
+    },
+    {
+      "params": {
+        "classifier__l2_regularization": 5.0,
+        "classifier__learning_rate": 0.03,
+        "classifier__max_iter": 200,
+        "classifier__max_leaf_nodes": 15,
+        "classifier__min_samples_leaf": 40
+      },
+      "mean_test_score": 0.6668173885006092,
+      "std_test_score": 0.019173149607368566,
+      "rank_test_score": 6
+    },
+    {
+      "params": {
+        "classifier__l2_regularization": 1.0,
+        "classifier__learning_rate": 0.03,
+        "classifier__max_iter": 100,
+        "classifier__max_leaf_nodes": 15,
+        "classifier__min_samples_leaf": 40
+      },
+      "mean_test_score": 0.6666725531340314,
+      "std_test_score": 0.024031439128159873,
+      "rank_test_score": 7
+    },
+    {
+      "params": {
+        "classifier__l2_regularization": 1.0,
+        "classifier__learning_rate": 0.05,
+        "classifier__max_iter": 100,
+        "classifier__max_leaf_nodes": 15,
+        "classifier__min_samples_leaf": 40
+      },
+      "mean_test_score": 0.6659522361131055,
+      "std_test_score": 0.02164504301335264,
+      "rank_test_score": 8
+    },
+    {
+      "params": {
+        "classifier__l2_regularization": 5.0,
+        "classifier__learning_rate": 0.05,
+        "classifier__max_iter": 100,
+        "classifier__max_leaf_nodes": 15,
+        "classifier__min_samples_leaf": 20
+      },
+      "mean_test_score": 0.6659308110552917,
+      "std_test_score": 0.022432760037738874,
+      "rank_test_score": 9
+    },
+    {
+      "params": {
+        "classifier__l2_regularization": 1.0,
+        "classifier__learning_rate": 0.03,
+        "classifier__max_iter": 150,
+        "classifier__max_leaf_nodes": 15,
+        "classifier__min_samples_leaf": 40
+      },
+      "mean_test_score": 0.6658327838715673,
+      "std_test_score": 0.02099554180328107,
+      "rank_test_score": 10
+    }
+  ]
+}

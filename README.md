@@ -96,23 +96,35 @@ predictlab-ml-platform/
 │       │   ├── summary.py             # Univariate numeric & categorical summaries
 │       │   ├── insights.py            # Segment churn rates, Chi-square & Mann-Whitney tests
 │       │   └── visuals.py             # Publication-grade visual figure generation
-│       └── preprocessing/             # Preprocessing & transformation package (Phase 3)
+│       ├── preprocessing/             # Preprocessing & transformation package (Phase 3)
+│       │   ├── __init__.py
+│       │   ├── schema.py              # Feature schemas, contracts & allowed category domains
+│       │   ├── cleaning.py            # TotalCharges deterministic cleaning & zero-tenure validation
+│       │   ├── feature_engineering.py # OptionalServiceCount, AutomaticPayment & ChargesRatio
+│       │   ├── transformers.py        # Scikit-learn custom transformers with get_feature_names_out
+│       │   ├── split.py               # Stratified holdout partition & manifest persistence
+│       │   └── pipelines.py           # Linear and tree ColumnTransformer factory functions
+│       └── models/                    # Modeling, evaluation, tuning & selection package (Phase 4)
 │           ├── __init__.py
-│           ├── schema.py              # Feature schemas, contracts & allowed category domains
-│           ├── cleaning.py            # TotalCharges deterministic cleaning & zero-tenure validation
-│           ├── feature_engineering.py # OptionalServiceCount, AutomaticPayment & ChargesRatio
-│           ├── transformers.py        # Scikit-learn custom transformers with get_feature_names_out
-│           ├── split.py               # Stratified holdout partition & manifest persistence
-│           └── pipelines.py           # Linear and tree ColumnTransformer factory functions
+│           ├── baselines.py           # DummyClassifier benchmarks (prior, most_frequent)
+│           ├── estimators.py          # Candidate model factories (LR, RF, HistGradientBoosting)
+│           ├── evaluation.py          # Multi-metric evaluation (PR-AUC, ROC-AUC, F1, Log Loss)
+│           ├── cross_validation.py    # Leakage-free Stratified 5-Fold cross-validation
+│           ├── experiments.py         # Model benchmark runner & feature ablation study
+│           ├── tuning.py              # Controlled hyperparameter tuning on training partition
+│           ├── selection.py           # Objective model selection & holdout evaluation
+│           └── persistence.py         # Artifact bundle & experiment JSON serialization
 │
 ├── app/                               # Streamlit UI application (Phase 6)
-├── models/                            # Serialized model binaries (Phase 4)
-├── artifacts/                         # Preprocessors, encoders, metrics (Phase 3-5)
+├── models/                            # Serialized model binaries (Phase 4-5)
+├── artifacts/                         # Preprocessors, model bundles, metrics (Phase 3-5)
 ├── reports/                           # Generated evaluation reports & figures
 │   ├── data_quality_report.md         # Comprehensive data quality audit report
 │   ├── eda_report.md                  # Detailed analytical findings & statistical test report
 │   ├── preprocessing_report.md        # Preprocessing, feature engineering & transformation report
-│   └── figures/                       # 16 publication-grade visualizations
+│   ├── model_comparison_report.md     # Model benchmarking, ablation & holdout evaluation report
+│   ├── experiments/                   # Experiment JSON/CSV metrics & tuning summaries
+│   └── figures/                       # 21 publication-grade visualizations
 │
 ├── tests/
 │   ├── fixtures/
@@ -125,7 +137,13 @@ predictlab-ml-platform/
 │   │   ├── test_preprocessing_cleaning.py  # TotalCharges validation & imputation tests
 │   │   ├── test_preprocessing_features.py  # OptionalServiceCount & feature engineering tests
 │   │   ├── test_preprocessing_split.py     # Stratified partitioning & manifest tests
-│   │   └── test_preprocessing_pipelines.py # ColumnTransformer & serialization tests
+│   │   ├── test_preprocessing_pipelines.py # ColumnTransformer & serialization tests
+│   │   ├── test_models_baselines.py        # Dummy baseline tests
+│   │   ├── test_models_estimators.py       # Estimator pipeline construction tests
+│   │   ├── test_models_evaluation.py       # Metric & curve calculation tests
+│   │   ├── test_models_cross_validation.py # Stratified CV & fold isolation tests
+│   │   ├── test_models_experiments.py      # Feature ablation tests
+│   │   └── test_models_selection_and_persistence.py # Selection, tuning & persistence tests
 │   └── integration/
 │       ├── test_data_pipeline.py      # End-to-end ingestion/validation pipeline
 │       ├── test_eda_pipeline.py       # End-to-end profiling pipeline on canonical dataset
@@ -173,7 +191,15 @@ PredictLab is developed following a rigorous 7-phase engineering plan:
   - Empirical leakage invariance verification proving training parameters are untouched by corrupted test sets.
   - Fully executed `notebooks/03_preprocessing_and_feature_engineering.ipynb` and `reports/preprocessing_report.md`.
   - 64 automated tests passing (100% pass rate) and clean Ruff static analysis.
-- [ ] **Phase 4: Model Exploration, Baseline Establishment & Comparison**
+- [x] **Phase 4: Model Exploration, Baseline Establishment & Controlled Tuning**
+  - Modular modeling package `src/predictlab/models/` implementing Dummy baselines, Logistic Regression, Random Forest, and HistGradientBoosting.
+  - Leakage-free Stratified 5-Fold Cross-Validation on $X_{\text{train}}$ only, tracking PR-AUC, ROC-AUC, F1, Balanced Accuracy, and Log Loss.
+  - Experimental feature ablation proving that the 47-feature baseline outperforms the 52-feature experimental pipeline.
+  - Controlled hyperparameter grid search optimizing HistGradientBoosting (`l2_regularization=5.0`, `learning_rate=0.03`, `max_iter=150`, `max_leaf_nodes=15`, `min_samples_leaf=40`).
+  - Final candidate selection and single one-time holdout test evaluation ($N = 1,409$): PR-AUC of **0.6617**, ROC-AUC of **0.8481**, Log Loss of **0.4139**.
+  - Serialized model bundle artifact (`artifacts/model.joblib`) with comprehensive provenance metadata.
+  - Clean execution of `notebooks/04_model_training_and_comparison.ipynb` and comprehensive `reports/model_comparison_report.md`.
+  - 92 passing automated unit and integration tests (100% pass rate) and clean Ruff static analysis.
 - [ ] **Phase 5: Probability Calibration, Threshold Tuning & Evaluation**
 - [ ] **Phase 6: Interactive Dashboard & Explainable Inference UI**
 - [ ] **Phase 7: Packaging, Verification & Production Readiness**

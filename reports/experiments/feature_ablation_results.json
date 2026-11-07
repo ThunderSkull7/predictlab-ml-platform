@@ -1,0 +1,432 @@
+[
+  {
+    "model_name": "Baseline (47 features)",
+    "n_splits": 5,
+    "fold_metrics": [
+      {
+        "average_precision": 0.6452051216012619,
+        "roc_auc": 0.8390932738758826,
+        "f1": 0.5730337078651685,
+        "precision": 0.6510638297872341,
+        "recall": 0.5117056856187291,
+        "balanced_accuracy": 0.7063359345968041,
+        "log_loss": 0.42732694698678164,
+        "brier_score": 0.1382422165726987,
+        "threshold": 0.5
+      },
+      {
+        "average_precision": 0.618357991509667,
+        "roc_auc": 0.8290194367699093,
+        "f1": 0.5217391304347826,
+        "precision": 0.6,
+        "recall": 0.46153846153846156,
+        "balanced_accuracy": 0.6752136752136753,
+        "log_loss": 0.44015362467634234,
+        "brier_score": 0.14575922818554854,
+        "threshold": 0.5
+      },
+      {
+        "average_precision": 0.6841252483454002,
+        "roc_auc": 0.8405776905304315,
+        "f1": 0.6094890510948905,
+        "precision": 0.6706827309236948,
+        "recall": 0.5585284280936454,
+        "balanced_accuracy": 0.7297473058342623,
+        "log_loss": 0.4233332112122622,
+        "brier_score": 0.13436227343055507,
+        "threshold": 0.5
+      },
+      {
+        "average_precision": 0.6494938687384135,
+        "roc_auc": 0.8485491089460844,
+        "f1": 0.5740740740740741,
+        "precision": 0.6431535269709544,
+        "recall": 0.5183946488294314,
+        "balanced_accuracy": 0.7072649572649572,
+        "log_loss": 0.41372141754222014,
+        "brier_score": 0.13586929234037115,
+        "threshold": 0.5
+      },
+      {
+        "average_precision": 0.6643453672773277,
+        "roc_auc": 0.851967258859641,
+        "f1": 0.5988483685220729,
+        "precision": 0.7027027027027027,
+        "recall": 0.5217391304347826,
+        "balanced_accuracy": 0.7209663004048157,
+        "log_loss": 0.411021931460448,
+        "brier_score": 0.13210092984776534,
+        "threshold": 0.5
+      }
+    ],
+    "mean_metrics": {
+      "average_precision": 0.6523055194944141,
+      "roc_auc": 0.8418413537963897,
+      "f1": 0.5754368663981977,
+      "precision": 0.6535205580769172,
+      "recall": 0.51438127090301,
+      "balanced_accuracy": 0.7079056346629029,
+      "log_loss": 0.42311142637561094,
+      "brier_score": 0.13726678807538778,
+      "threshold": 0.5
+    },
+    "std_metrics": {
+      "average_precision": 0.024332122622553905,
+      "roc_auc": 0.008959328613677023,
+      "f1": 0.033906964386996134,
+      "precision": 0.03772063265482286,
+      "recall": 0.03470856538894876,
+      "balanced_accuracy": 0.020732090027512057,
+      "log_loss": 0.011646721412626527,
+      "brier_score": 0.005247577790213438,
+      "threshold": 0.0
+    },
+    "mean_fit_time": 0.34750009999988835,
+    "mean_score_time": 0.01787353999898187,
+    "warnings_encountered": []
+  },
+  {
+    "model_name": "Full Experimental (52 features)",
+    "n_splits": 5,
+    "fold_metrics": [
+      {
+        "average_precision": 0.639779789460739,
+        "roc_auc": 0.8401757872457304,
+        "f1": 0.5612052730696798,
+        "precision": 0.6422413793103449,
+        "recall": 0.4983277591973244,
+        "balanced_accuracy": 0.6990431066518024,
+        "log_loss": 0.42655042429788503,
+        "brier_score": 0.1383121468193676,
+        "threshold": 0.5
+      },
+      {
+        "average_precision": 0.6163916507337585,
+        "roc_auc": 0.8299282632931027,
+        "f1": 0.5592592592592592,
+        "precision": 0.6265560165975104,
+        "recall": 0.5050167224080268,
+        "balanced_accuracy": 0.6981605351170568,
+        "log_loss": 0.44167783680554984,
+        "brier_score": 0.14583357442492714,
+        "threshold": 0.5
+      },
+      {
+        "average_precision": 0.6654354472390603,
+        "roc_auc": 0.8362819704974714,
+        "f1": 0.5854545454545454,
+        "precision": 0.6414342629482072,
+        "recall": 0.5384615384615384,
+        "balanced_accuracy": 0.7148829431438126,
+        "log_loss": 0.4290965667706452,
+        "brier_score": 0.1377659985558098,
+        "threshold": 0.5
+      },
+      {
+        "average_precision": 0.6596988862227361,
+        "roc_auc": 0.8565750569531287,
+        "f1": 0.5985401459854015,
+        "precision": 0.6586345381526104,
+        "recall": 0.5484949832775919,
+        "balanced_accuracy": 0.722918989223337,
+        "log_loss": 0.4046578667508492,
+        "brier_score": 0.13227207425168355,
+        "threshold": 0.5
+      },
+      {
+        "average_precision": 0.6405790276141221,
+        "roc_auc": 0.8386378617964759,
+        "f1": 0.5841392649903289,
+        "precision": 0.6926605504587156,
+        "recall": 0.5050167224080268,
+        "balanced_accuracy": 0.7120005014700351,
+        "log_loss": 0.4294723746121089,
+        "brier_score": 0.13812062517320597,
+        "threshold": 0.5
+      }
+    ],
+    "mean_metrics": {
+      "average_precision": 0.6443769602540833,
+      "roc_auc": 0.8403197879571819,
+      "f1": 0.577719697751843,
+      "precision": 0.6523053494934776,
+      "recall": 0.5190635451505017,
+      "balanced_accuracy": 0.7094012151212088,
+      "log_loss": 0.42629101384740764,
+      "brier_score": 0.13846088384499883,
+      "threshold": 0.5
+    },
+    "std_metrics": {
+      "average_precision": 0.019345264989620643,
+      "roc_auc": 0.009891551150194624,
+      "f1": 0.016941397441482216,
+      "precision": 0.025254173106324045,
+      "recall": 0.022732636077547046,
+      "balanced_accuracy": 0.010644002376137636,
+      "log_loss": 0.013442533720886026,
+      "brier_score": 0.004829044802063087,
+      "threshold": 0.0
+    },
+    "mean_fit_time": 0.3767032999996445,
+    "mean_score_time": 0.027093860000604764,
+    "warnings_encountered": []
+  },
+  {
+    "model_name": "Ablate ChargesRatio (50 features)",
+    "n_splits": 5,
+    "fold_metrics": [
+      {
+        "average_precision": 0.6391598537182427,
+        "roc_auc": 0.8376189552938135,
+        "f1": 0.5649717514124294,
+        "precision": 0.646551724137931,
+        "recall": 0.5016722408026756,
+        "balanced_accuracy": 0.7013192121887775,
+        "log_loss": 0.4297620711490307,
+        "brier_score": 0.13910967557975462,
+        "threshold": 0.5
+      },
+      {
+        "average_precision": 0.6184732754147716,
+        "roc_auc": 0.8282115909715153,
+        "f1": 0.5310734463276836,
+        "precision": 0.6077586206896551,
+        "recall": 0.47157190635451507,
+        "balanced_accuracy": 0.6808342623560015,
+        "log_loss": 0.4441078925196378,
+        "brier_score": 0.14745794386285102,
+        "threshold": 0.5
+      },
+      {
+        "average_precision": 0.683727075867613,
+        "roc_auc": 0.8392326272761055,
+        "f1": 0.6123188405797102,
+        "precision": 0.6679841897233202,
+        "recall": 0.5652173913043478,
+        "balanced_accuracy": 0.7318840579710144,
+        "log_loss": 0.424981814897418,
+        "brier_score": 0.13513910594910364,
+        "threshold": 0.5
+      },
+      {
+        "average_precision": 0.6477221633384119,
+        "roc_auc": 0.8491610521383679,
+        "f1": 0.5724907063197026,
+        "precision": 0.6443514644351465,
+        "recall": 0.5150501672240803,
+        "balanced_accuracy": 0.7061965811965811,
+        "log_loss": 0.4136554174572784,
+        "brier_score": 0.13572299471406432,
+        "threshold": 0.5
+      },
+      {
+        "average_precision": 0.6689376782284367,
+        "roc_auc": 0.8527073315727961,
+        "f1": 0.59765625,
+        "precision": 0.7183098591549296,
+        "recall": 0.5117056856187291,
+        "balanced_accuracy": 0.7195771475252049,
+        "log_loss": 0.4112374791314627,
+        "brier_score": 0.13201807620135556,
+        "threshold": 0.5
+      }
+    ],
+    "mean_metrics": {
+      "average_precision": 0.6516040093134952,
+      "roc_auc": 0.8413863114505198,
+      "f1": 0.5757021989279052,
+      "precision": 0.6569911716281965,
+      "recall": 0.5130434782608695,
+      "balanced_accuracy": 0.7079622522475159,
+      "log_loss": 0.4247489350309655,
+      "brier_score": 0.13788955926142582,
+      "threshold": 0.5
+    },
+    "std_metrics": {
+      "average_precision": 0.02549469919519671,
+      "roc_auc": 0.009759824242868845,
+      "f1": 0.03138447287927405,
+      "precision": 0.04053830355535667,
+      "recall": 0.03382724497254923,
+      "balanced_accuracy": 0.019302422078723087,
+      "log_loss": 0.013281383347571358,
+      "brier_score": 0.005911344525505238,
+      "threshold": 0.0
+    },
+    "mean_fit_time": 0.3578756800008705,
+    "mean_score_time": 0.023189299999648937,
+    "warnings_encountered": []
+  },
+  {
+    "model_name": "Ablate AutomaticPayment (51 features)",
+    "n_splits": 5,
+    "fold_metrics": [
+      {
+        "average_precision": 0.6422067074468523,
+        "roc_auc": 0.8400243161585317,
+        "f1": 0.5661080074487895,
+        "precision": 0.6386554621848739,
+        "recall": 0.5083612040133779,
+        "balanced_accuracy": 0.7022482348569306,
+        "log_loss": 0.4272439877814145,
+        "brier_score": 0.13831498348257,
+        "threshold": 0.5
+      },
+      {
+        "average_precision": 0.6111572164173706,
+        "roc_auc": 0.8276602362141114,
+        "f1": 0.5588235294117647,
+        "precision": 0.6204081632653061,
+        "recall": 0.5083612040133779,
+        "balanced_accuracy": 0.6980211817168338,
+        "log_loss": 0.44376664989983844,
+        "brier_score": 0.14659998470255184,
+        "threshold": 0.5
+      },
+      {
+        "average_precision": 0.6626534378093503,
+        "roc_auc": 0.8370978947538494,
+        "f1": 0.5818181818181818,
+        "precision": 0.6374501992031872,
+        "recall": 0.5351170568561873,
+        "balanced_accuracy": 0.7126068376068375,
+        "log_loss": 0.42804884918747,
+        "brier_score": 0.13753916055309304,
+        "threshold": 0.5
+      },
+      {
+        "average_precision": 0.6584803135414852,
+        "roc_auc": 0.8570860194206129,
+        "f1": 0.6139705882352942,
+        "precision": 0.6816326530612244,
+        "recall": 0.5585284280936454,
+        "balanced_accuracy": 0.7321627647714604,
+        "log_loss": 0.40394682471297155,
+        "brier_score": 0.13196896209982384,
+        "threshold": 0.5
+      },
+      {
+        "average_precision": 0.64277088964719,
+        "roc_auc": 0.8396468680365425,
+        "f1": 0.5758157389635317,
+        "precision": 0.6756756756756757,
+        "recall": 0.5016722408026756,
+        "balanced_accuracy": 0.7073052860603463,
+        "log_loss": 0.42809921734707845,
+        "brier_score": 0.13755472765991664,
+        "threshold": 0.5
+      }
+    ],
+    "mean_metrics": {
+      "average_precision": 0.6434537129724497,
+      "roc_auc": 0.8403030669167297,
+      "f1": 0.5793072091755124,
+      "precision": 0.6507644306780535,
+      "recall": 0.5224080267558529,
+      "balanced_accuracy": 0.7104688610024816,
+      "log_loss": 0.4262211057857546,
+      "brier_score": 0.13839556369959108,
+      "threshold": 0.5
+    },
+    "std_metrics": {
+      "average_precision": 0.020245450838896232,
+      "roc_auc": 0.010633556442600988,
+      "f1": 0.021294631122550523,
+      "precision": 0.026546262116340476,
+      "recall": 0.023931162301001077,
+      "balanced_accuracy": 0.013301579087990394,
+      "log_loss": 0.014246964168946141,
+      "brier_score": 0.005245489893286346,
+      "threshold": 0.0
+    },
+    "mean_fit_time": 0.39794980000006036,
+    "mean_score_time": 0.02374313999971491,
+    "warnings_encountered": []
+  },
+  {
+    "model_name": "Ablate Service Subtotals (50 features)",
+    "n_splits": 5,
+    "fold_metrics": [
+      {
+        "average_precision": 0.6336503005840036,
+        "roc_auc": 0.8383278399819043,
+        "f1": 0.5708884688090737,
+        "precision": 0.6565217391304348,
+        "recall": 0.5050167224080268,
+        "balanced_accuracy": 0.7048030471943516,
+        "log_loss": 0.4289237847445273,
+        "brier_score": 0.13914878968895447,
+        "threshold": 0.5
+      },
+      {
+        "average_precision": 0.6123935176555431,
+        "roc_auc": 0.8285125135314171,
+        "f1": 0.5561694290976059,
+        "precision": 0.6188524590163934,
+        "recall": 0.5050167224080268,
+        "balanced_accuracy": 0.6963489409141583,
+        "log_loss": 0.4427778784484984,
+        "brier_score": 0.14593444818916929,
+        "threshold": 0.5
+      },
+      {
+        "average_precision": 0.6653856002351539,
+        "roc_auc": 0.8379218974682113,
+        "f1": 0.5792349726775956,
+        "precision": 0.636,
+        "recall": 0.5317725752508361,
+        "balanced_accuracy": 0.710934596804162,
+        "log_loss": 0.4267124839844732,
+        "brier_score": 0.13688506999380362,
+        "threshold": 0.5
+      },
+      {
+        "average_precision": 0.6614590567264786,
+        "roc_auc": 0.8552582683017466,
+        "f1": 0.6066176470588235,
+        "precision": 0.673469387755102,
+        "recall": 0.5518394648829431,
+        "balanced_accuracy": 0.7276105536975102,
+        "log_loss": 0.40535787509755195,
+        "brier_score": 0.13268873364975672,
+        "threshold": 0.5
+      },
+      {
+        "average_precision": 0.6514712101536516,
+        "roc_auc": 0.841519292441957,
+        "f1": 0.591337099811676,
+        "precision": 0.6767241379310345,
+        "recall": 0.5250836120401338,
+        "balanced_accuracy": 0.7171971869148674,
+        "log_loss": 0.4252029153530166,
+        "brier_score": 0.13619826655077133,
+        "threshold": 0.5
+      }
+    ],
+    "mean_metrics": {
+      "average_precision": 0.6448719370709661,
+      "roc_auc": 0.8403079623450473,
+      "f1": 0.580849523490955,
+      "precision": 0.6523135447665929,
+      "recall": 0.5237458193979933,
+      "balanced_accuracy": 0.7113788651050099,
+      "log_loss": 0.4257949875256134,
+      "brier_score": 0.13817106161449105,
+      "threshold": 0.5
+    },
+    "std_metrics": {
+      "average_precision": 0.021910420884076826,
+      "roc_auc": 0.00966599415072056,
+      "f1": 0.0192673421445516,
+      "precision": 0.02473323499581098,
+      "recall": 0.01972960696154196,
+      "balanced_accuracy": 0.011902289275040586,
+      "log_loss": 0.013389136172121986,
+      "brier_score": 0.004920054319321876,
+      "threshold": 0.0
+    },
+    "mean_fit_time": 0.3824886600013997,
+    "mean_score_time": 0.02108100000041304,
+    "warnings_encountered": []
+  }
+]

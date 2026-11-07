@@ -1,0 +1,6 @@
+Configuration,PR-AUC (Mean),PR-AUC (Std),Δ PR-AUC,ROC-AUC (Mean),Δ ROC-AUC,F1 (Mean),Δ F1,Log Loss (Mean),Δ Log Loss,Fit Time (s)
+Baseline (47 features),0.6523,0.0243,0.0,0.8418,0.0,0.5754,0.0,0.4231,0.0,0.348
+Full Experimental (52 features),0.6444,0.0193,-0.0079,0.8403,-0.0015,0.5777,0.0023,0.4263,0.0032,0.377
+Ablate ChargesRatio (50 features),0.6516,0.0255,-0.0007,0.8414,-0.0005,0.5757,0.0003,0.4247,0.0016,0.358
+Ablate AutomaticPayment (51 features),0.6435,0.0202,-0.0089,0.8403,-0.0015,0.5793,0.0039,0.4262,0.0031,0.398
+Ablate Service Subtotals (50 features),0.6449,0.0219,-0.0074,0.8403,-0.0015,0.5808,0.0054,0.4258,0.0027,0.382

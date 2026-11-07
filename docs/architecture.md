@@ -68,14 +68,24 @@ predictlab-ml-platform/
 │   │   ├── summary.py          # Univariate numeric and categorical summaries
 │   │   ├── insights.py         # Segment churn rates, Chi-square & Mann-Whitney tests
 │   │   └── visuals.py          # Publication-grade visual figure generation
-│   └── preprocessing/          # Leakage-free preprocessing, feature engineering & pipelines (Phase 3)
+│   ├── preprocessing/          # Leakage-free preprocessing, feature engineering & pipelines (Phase 3)
+│   │   ├── __init__.py
+│   │   ├── schema.py           # Feature definitions, contracts & domain boundaries
+│   │   ├── cleaning.py         # Deterministic TotalCharges cleaning & zero-tenure validation
+│   │   ├── feature_engineering.py # OptionalServiceCount, AutomaticPayment & ChargesRatio
+│   │   ├── transformers.py     # Scikit-learn compatible custom transformers
+│   │   ├── split.py            # Stratified holdout partitioning & manifest persistence
+│   │   └── pipelines.py        # Linear and tree ColumnTransformer pipeline factories
+│   └── models/                 # Model benchmarking, tuning, ablation & selection (Phase 4)
 │       ├── __init__.py
-│       ├── schema.py           # Feature definitions, contracts & domain boundaries
-│       ├── cleaning.py         # Deterministic TotalCharges cleaning & zero-tenure validation
-│       ├── feature_engineering.py # OptionalServiceCount, AutomaticPayment & ChargesRatio
-│       ├── transformers.py     # Scikit-learn compatible custom transformers
-│       ├── split.py            # Stratified holdout partitioning & manifest persistence
-│       └── pipelines.py        # Linear and tree ColumnTransformer pipeline factories
+│       ├── baselines.py        # DummyClassifier benchmarks (prior, most_frequent)
+│       ├── estimators.py       # Candidate model factories (LR, RF, HistGradientBoosting)
+│       ├── evaluation.py       # Multi-metric evaluation (PR-AUC, ROC-AUC, F1, Log Loss)
+│       ├── cross_validation.py # Leakage-free Stratified 5-Fold cross-validation
+│       ├── experiments.py      # Benchmark runner & feature ablation studies
+│       ├── tuning.py           # Controlled hyperparameter tuning on training partition
+│       ├── selection.py        # Objective model selection & holdout evaluation
+│       └── persistence.py      # Artifact bundle and experiment JSON serialization
 ├── app/                        # Streamlit web application (Phase 6)
 ├── models/                     # Serialized model binaries (Phase 4-5)
 ├── artifacts/                  # Serialized transformers, metrics, and figures
@@ -119,6 +129,16 @@ predictlab-ml-platform/
 - **Feature Engineering (`feature_engineering.py`)**: Implements domain feature extraction (`OptionalServiceCount`, `AutomaticPayment`, and experimental `ChargesRatio`).
 - **Custom Transformers (`transformers.py`)**: Exposes scikit-learn compatible transformers (`TotalChargesCleaner`, `OptionalServiceCounter`, `ColumnDropper`, etc.) with `get_feature_names_out()`.
 - **Pipeline Factories (`pipelines.py`)**: Assembles production `ColumnTransformer` pipelines for both linear models (with standardization) and tree models (preserving natural units). Includes Joblib serialization utilities.
+
+### F. Modeling, Evaluation & Selection (`predictlab.models`)
+- **Baseline Establishment (`baselines.py`)**: Implements DummyClassifier benchmarks (`prior`, `most_frequent`, `stratified`) wrapped in uniform scikit-learn pipelines.
+- **Candidate Model Factories (`estimators.py`)**: Encapsulates pipeline composition for Logistic Regression (L1/L2), Random Forest (unconstrained, constrained, balanced), and Histogram Gradient Boosting.
+- **Multi-Metric Evaluation (`evaluation.py`)**: Computes ranking metrics (Average Precision / PR-AUC, ROC-AUC), classification metrics (F1, Precision, Recall, Balanced Accuracy), and probabilistic loss (Log Loss, Brier Score), alongside confusion matrices and curve coordinates.
+- **Leakage-Free Cross-Validation (`cross_validation.py`)**: Enforces fold-level pipeline fitting using stratified 5-fold CV, tracking mean, standard deviation, fit times, and warnings.
+- **Experimental Ablation (`experiments.py`)**: Empirically benchmarks candidate model families and executes controlled feature ablation comparing the 47-feature baseline against the 52-feature experimental pipeline.
+- **Controlled Tuning (`tuning.py`)**: Executes bounded hyperparameter search on the training partition only using PR-AUC as the primary optimization target.
+- **Model Selection & Holdout Evaluation (`selection.py`)**: Programmatically selects the optimal candidate based on multi-criteria ranking and executes a single holdout evaluation on the protected test partition.
+- **Persistence (`persistence.py`)**: Serializes experiment reports to `reports/experiments/` and bundles the final fitted pipeline with complete provenance metadata to `artifacts/model.joblib`.
 
 ---
 

@@ -255,20 +255,22 @@ class ColumnDropper(BaseEstimator, TransformerMixin):
     """Transformer that drops specified columns if present in DataFrame."""
 
     def __init__(self, columns_to_drop: Sequence[str] | None = None) -> None:
-        self.columns_to_drop = list(columns_to_drop) if columns_to_drop is not None else []
+        self.columns_to_drop = columns_to_drop
         self.feature_names_in_: np.ndarray | None = None
         self.feature_names_out_: list[str] | None = None
 
     def fit(self, X: pd.DataFrame, y: Any = None) -> "ColumnDropper":
         if isinstance(X, pd.DataFrame):
+            drop_cols = list(self.columns_to_drop) if self.columns_to_drop is not None else []
             self.feature_names_in_ = np.array(X.columns, dtype=str)
-            self.feature_names_out_ = [c for c in X.columns if c not in self.columns_to_drop]
+            self.feature_names_out_ = [c for c in X.columns if c not in drop_cols]
         return self
 
     def transform(self, X: pd.DataFrame) -> pd.DataFrame:
         if not isinstance(X, pd.DataFrame):
             X = pd.DataFrame(X, columns=self.feature_names_in_)
-        existing_drops = [c for c in self.columns_to_drop if c in X.columns]
+        drop_cols = list(self.columns_to_drop) if self.columns_to_drop is not None else []
+        existing_drops = [c for c in drop_cols if c in X.columns]
         if existing_drops:
             return X.drop(columns=existing_drops)
         return X.copy()
@@ -277,5 +279,6 @@ class ColumnDropper(BaseEstimator, TransformerMixin):
         if self.feature_names_out_ is not None:
             return np.array(self.feature_names_out_, dtype=str)
         if input_features is not None:
-            return np.array([c for c in input_features if c not in self.columns_to_drop], dtype=str)
+            drop_cols = list(self.columns_to_drop) if self.columns_to_drop is not None else []
+            return np.array([c for c in input_features if c not in drop_cols], dtype=str)
         raise ValueError("Transformer has not been fitted.")
