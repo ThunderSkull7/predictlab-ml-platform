@@ -9,8 +9,10 @@ Phase 4 establishes an empirical machine-learning benchmarking framework using t
 - All candidate models were evaluated exclusively on the training partition ($N = 5,634$) using **stratified 5-fold cross-validation**.
 - Preprocessing and estimators were encapsulated inside scikit-learn Pipelines, ensuring transformers were fitted **strictly within each cross-validation fold**.
 - A comprehensive **experimental feature ablation study** empirically evaluated whether the Phase 3.1 52-feature experimental pipeline provided predictive lift over the canonical 47-feature baseline.
-- The tuned **Histogram Gradient Boosting Classifier** was selected as the champion model family, achieving a cross-validated Average Precision (PR-AUC) of **0.6684** (±0.0218) and ROC-AUC of **0.8495** (±0.0123).
+- The tuned **Histogram Gradient Boosting Classifier** was selected as the champion model family, achieving a cross-validated Average Precision (PR-AUC) of **0.6684** (±0.0218), ROC-AUC of **0.8495** (±0.0123), and Log Loss of **0.4121** (±0.0133).
 - A single final evaluation on the protected holdout test set demonstrated strong generalization with PR-AUC of **0.6617**, ROC-AUC of **0.8481**, and Log Loss of **0.4139**.
+- **Model-Estimated Pseudo-Probabilities**: Output scores produced by `HistGradientBoostingClassifier.predict_proba()` represent model-estimated class probabilities, **not calibrated probabilities**. Lower log loss reflects superior proper scoring performance rather than empirical calibration. Formal calibration analysis (calibration curves, Platt scaling, isotonic regression) is deferred to Phase 5.
+- **Strict Data Partitioning for Importance & Holdout**: Permutation feature importance was evaluated strictly on the training partition ($X_{\text{train}}, y_{\text{train}}$) using `scoring="average_precision"`. The holdout test set ($N=1,409$) was evaluated strictly once for final independent performance estimation.
 
 > [!IMPORTANT]
 > **Cross-Sectional Scope Limitation**: The dataset is a cross-sectional snapshot of customer accounts at a single observation point. All model evaluations represent retrospective classification and risk ranking across subscriber accounts, **not temporal forecasting or forward-looking event prediction**.
@@ -39,7 +41,7 @@ Because customer churn exhibits class imbalance ($26.54\%$ positive prevalence, 
 - **Average Precision / PR-AUC (Primary Criterion)**: Evaluates the area under the Precision-Recall curve, directly penalizing false positives in the minority churn class across all classification thresholds.
 - **ROC-AUC**: Discriminative ranking ability across positive and negative pairs.
 - **F1-Score, Precision, Recall, Balanced Accuracy**: Threshold-dependent metrics evaluated at the initial decision threshold ($0.5$).
-- **Log Loss & Brier Score**: Quality and reliability of predicted probability distributions.
+- **Log Loss & Brier Score**: Strictly proper scoring rules that evaluate the probabilistic accuracy and cross-entropy of predicted probability distributions without independently proving empirical calibration.
 
 ---
 
@@ -65,7 +67,7 @@ Ten candidate model configurations across four architectural families were evalu
 ### 3.2 Key Benchmark Findings
 1. **Unconstrained Trees Memorize**: An unconstrained Random Forest (`max_depth=None`, `min_samples_leaf=1`) suffers severe overfitting, yielding a substantially lower PR-AUC ($0.6079$) and higher log loss ($0.5050$). Constraining tree depth to $8$ and leaf size to $5$ restores performance to $0.6642$ ($+0.0563$ PR-AUC lift).
 2. **Linear Regularization Competitiveness**: L1 and L2 regularized logistic regressions achieve exceptional ranking performance ($0.6619$ PR-AUC), confirming that linear combinations of demographic, contract, and service indicators form a strong predictive signal.
-3. **Class Weighting Trade-Off**: Introducing `class_weight="balanced"` improves minority recall (raising Balanced Accuracy from $0.719$ to $0.765$ and F1 from $0.592$ to $0.628$), but incurs a penalty in Log Loss ($0.4166 \to 0.4908$) due to probability miscalibration at the standard $0.5$ threshold.
+3. **Class Weighting Trade-Off**: Introducing `class_weight="balanced"` improves minority recall (raising Balanced Accuracy from $0.719$ to $0.765$ and F1 from $0.592$ to $0.628$), but incurs a penalty in Log Loss ($0.4166 \to 0.4908$) due to distorted posterior probability estimates produced by artificial sample weighting at the default $0.5$ decision threshold.
 
 ![Candidate Model Benchmark](figures/17_candidate_models_pr_auc_comparison.png)
 
@@ -113,11 +115,29 @@ Controlled grid search was executed strictly on the training partition ($N = 5,6
 | `min_samples_leaf` | `[20, 40]` | **`40`** | Enforces minimum statistical support at leaves, stabilizing leaf predictions. |
 | `l2_regularization` | `[0.1, 1.0, 5.0]` | **`5.0`** | High L2 leaf value regularization penalizes extreme log-odds adjustments in terminal nodes. |
 
-### 5.2 Tuning Results
+### 5.2 Tuning Results & Fold-Level Breakdown
+
+Controlled hyperparameter tuning produced significant gains across ranking and probabilistic metrics:
 - **Default HistGradientBoosting PR-AUC**: $0.6523 \pm 0.0243$
 - **Tuned HistGradientBoosting PR-AUC**: **$0.6684 \pm 0.0218$** ($+0.0161$ improvement)
 - **Tuned HistGradientBoosting ROC-AUC**: **$0.8495 \pm 0.0123$** ($+0.0077$ improvement)
-- **Tuned HistGradientBoosting Log Loss**: **$0.4121 \pm 0.0118$** (reduced from $0.4231$)
+- **Tuned HistGradientBoosting Log Loss**: **$0.4121 \pm 0.0133$** (reduced from $0.4231$)
+
+The complete fold-level metrics for the tuned model (`Hist Gradient Boosting (Tuned)`) across all 5 cross-validation folds on $X_{\text{train}}$ are detailed below:
+
+| Fold | PR-AUC | ROC-AUC | F1-Score | Precision | Recall | Balanced Acc | Log Loss | Brier Score |
+|---|---|---|---|---|---|---|---|---|
+| Fold 1 | 0.6501 | 0.8445 | 0.5649 | 0.6578 | 0.4950 | 0.7010 | 0.4177 | 0.1360 |
+| Fold 2 | 0.6407 | 0.8332 | 0.5461 | 0.6250 | 0.4849 | 0.6899 | 0.4306 | 0.1420 |
+| Fold 3 | 0.6910 | 0.8459 | 0.6140 | 0.6816 | 0.5585 | 0.7322 | 0.4138 | 0.1329 |
+| Fold 4 | 0.6774 | 0.8613 | 0.6134 | 0.6706 | 0.5652 | 0.7325 | 0.3989 | 0.1293 |
+| Fold 5 | 0.6826 | 0.8624 | 0.5930 | 0.7051 | 0.5117 | 0.7172 | 0.3993 | 0.1283 |
+| **Mean ± Std** | **0.6684 ± 0.0218** | **0.8495 ± 0.0123** | **0.5863 ± 0.0301** | **0.6680 ± 0.0297** | **0.5231 ± 0.0368** | **0.7145 ± 0.0189** | **0.4121 ± 0.0133** | **0.1337 ± 0.0055** |
+
+> [!NOTE]
+> **Methodological Nuances on Tuned CV Metrics**:
+> 1. **Selection Bias Limitation**: Tuned CV metrics may exhibit slight optimistic selection bias because hyperparameters were selected via grid search on the same 5-fold cross-validation procedure. The one-time evaluation on the protected holdout test set provides the unbiased check on out-of-sample generalization.
+> 2. **Split Variability vs Confidence Intervals**: The standard deviations reported across cross-validation folds quantify split variability induced by finite-sample partitioning. They must **not** be interpreted as population confidence intervals or formal hypothesis test critical values.
 
 ---
 
@@ -126,7 +146,7 @@ Controlled grid search was executed strictly on the training partition ($N = 5,6
 The **Tuned Histogram Gradient Boosting Classifier (`Hist Gradient Boosting (Tuned)`)** was selected as the champion model for PredictLab based on the following multi-criteria evaluation:
 
 1. **Peak Discrimination (PR-AUC)**: Achieved the highest cross-validated PR-AUC ($0.6684$), outperforming constrained random forests ($0.6642$) and regularized logistic regression ($0.6619$).
-2. **Superior Log Loss (Probability Calibration Quality)**: Delivered the lowest cross-entropy loss ($0.4121$), indicating that its predicted probabilities are more closely aligned with empirical churn risk before formal calibration.
+2. **Superior Log Loss (Proper Probabilistic Scoring)**: Delivered the lowest cross-entropy loss ($0.4121 \pm 0.0133$) among candidate models, indicating superior probabilistic predictive accuracy under a proper scoring rule. (Note: lower log loss does not independently establish empirical calibration; formal calibration curves and post-hoc calibration methods are deferred to Phase 5).
 3. **Fold Stability**: Demonstrated narrow standard deviation across the 5 validation folds ($\sigma = 0.0218$ for PR-AUC; $\sigma = 0.0123$ for ROC-AUC), confirming that performance is robust across sample splits.
 4. **Computational Efficiency**: Gradient boosting inference is highly optimized ($< 0.005$ seconds scoring time per batch), providing superior responsiveness for single-customer and cohort scoring in downstream phases.
 
@@ -136,18 +156,23 @@ The **Tuned Histogram Gradient Boosting Classifier (`Hist Gradient Boosting (Tun
 
 The selected pipeline was refitted once on the complete training partition ($N = 5,634$) and evaluated on the untouched holdout test partition ($N = 1,409$):
 
-### 7.1 Holdout Performance Metrics Table
+### 7.1 Three-Tier Performance Metrics Reconciliation
 
-| Metric | Holdout Test Score | 5-Fold CV Mean | Generalization Delta (Test - CV) |
-|---|---|---|---|
-| **Average Precision / PR-AUC** | **0.6617** | **0.6684 ± 0.0218** | **-0.0067** (within 0.31 σ) |
-| **ROC-AUC** | **0.8481** | **0.8495 ± 0.0123** | **-0.0014** (within 0.11 σ) |
-| **Log Loss** | **0.4139** | **0.4121 ± 0.0118** | **+0.0018** (within 0.15 σ) |
-| **Brier Score** | **0.1351** | — | — |
-| **Balanced Accuracy** | **0.7114** | 0.7079 ± 0.0207 | +0.0035 |
-| **F1-Score** | **0.5812** | 0.5754 ± 0.0339 | +0.0058 |
-| **Precision** | **0.6566** | — | — |
-| **Recall** | **0.5214** | — | — |
+To prevent metric substitution and ensure full transparency, the table below reconciles all three evaluation tiers:
+1. **Tier 1: Candidate Benchmark (Untuned CV)** — Baseline HistGradientBoosting 5-fold cross-validation.
+2. **Tier 2: Tuned Estimator (5-Fold CV)** — Tuned HistGradientBoosting evaluated strictly on $X_{\text{train}}$.
+3. **Tier 3: One-Time Protected Holdout Test** — Evaluated strictly once on held-out $X_{\text{test}}$ ($N=1,409$).
+
+| Metric | Tier 1: Candidate Benchmark (Untuned CV Mean ± Std) | Tier 2: Tuned Estimator (5-Fold CV Mean ± Std) | Tier 3: Protected Holdout Test Score ($N=1,409$) | Generalization Delta (Holdout - Tuned CV) | Delta in Fold Std Units (σ) |
+|---|---|---|---|---|---|
+| **Average Precision / PR-AUC** | 0.6523 ± 0.0243 | **0.6684 ± 0.0218** | **0.6617** | **-0.0067** | -0.31 σ |
+| **ROC-AUC** | 0.8418 ± 0.0090 | **0.8495 ± 0.0123** | **0.8481** | **-0.0014** | -0.11 σ |
+| **Log Loss** | 0.4231 ± 0.0116 | **0.4121 ± 0.0133** | **0.4139** | **+0.0018** | +0.14 σ |
+| **Brier Score** | 0.1373 ± 0.0052 | **0.1337 ± 0.0055** | **0.1351** | **+0.0014** | +0.25 σ |
+| **Balanced Accuracy** | 0.7079 ± 0.0207 | **0.7145 ± 0.0189** | **0.7114** | **-0.0031** | -0.16 σ |
+| **F1-Score** | 0.5754 ± 0.0339 | **0.5863 ± 0.0301** | **0.5812** | **-0.0051** | -0.17 σ |
+| **Precision** | 0.6535 ± 0.0377 | **0.6680 ± 0.0297** | **0.6566** | **-0.0114** | -0.38 σ |
+| **Recall** | 0.5144 ± 0.0347 | **0.5231 ± 0.0368** | **0.5214** | **-0.0017** | -0.05 σ |
 
 ### 7.2 Confusion Matrix (Decision Threshold = 0.5)
 
@@ -165,16 +190,22 @@ Actual Churned  (N=374)        179 (FN)             195 (TP)
 ![Holdout Confusion Matrix](figures/20_holdout_confusion_matrix.png)
 
 ### 7.3 Generalization Integrity Analysis
-The holdout test metrics track the cross-validation estimates with remarkable fidelity:
-- PR-AUC delta is $-0.0067$, well within the cross-validation standard deviation ($0.0218$).
+The holdout test metrics track the tuned cross-validation estimates with remarkable fidelity:
+- PR-AUC delta is $-0.0067$, within $0.31$ standard deviations of the cross-validation mean.
 - ROC-AUC delta is $-0.0014$, within $0.11$ standard deviations of the cross-validation mean.
-- This proves that the strict fold-level pipeline encapsulation completely prevented information leakage, ensuring that the cross-validation estimate served as an unbiased predictor of out-of-sample performance.
+- Log Loss delta is $+0.0018$, within $0.14$ standard deviations of the cross-validation mean.
+- F1 delta is $-0.0051$ (within $0.17 \sigma$) and Balanced Accuracy delta is $-0.0031$ (within $0.16 \sigma$).
+- This empirical alignment demonstrates that the strict fold-level pipeline encapsulation completely prevented information leakage, ensuring that the cross-validation estimate served as a reliable predictor of out-of-sample performance. The minor negative shifts are consistent with expected selection shrinkage from tuning rather than test-set overfitting.
 
 ---
 
 ## 8. Explainability Preparation & Top Predictors
 
-In preparation for Phase 5 (Explainability & Threshold Analysis), feature importance scores were computed using permutation importance on the training partition ($N_{\text{repeats}} = 5$, metric: Average Precision):
+In preparation for Phase 5 (Explainability & Threshold Analysis), feature importance scores were computed using permutation importance:
+- **Partition Utilized**: Strictly the **training partition** ($X_{\text{train}}, y_{\text{train}}$, $N = 5,634$).
+- **Scoring Objective**: `scoring="average_precision"`.
+- **Repeats & Seed**: $N_{\text{repeats}} = 5$, `random_state = 42`.
+- **Holdout Set Protection**: The protected holdout test set ($X_{\text{test}}, y_{\text{test}}$, $N = 1,409$) was **never accessed** for permutation importance, feature selection, or feature ranking. It was evaluated strictly once for final independent performance verification.
 
 ### 8.1 Top 15 Predictive Features
 
@@ -213,21 +244,27 @@ The complete model artifact bundle was serialized to [`artifacts/model.joblib`](
 - **Metadata Encapsulated**:
   - `dataset_sha256`: `16320c9c1ec72448db59aa0a26a0b95401046bef5d02fd3aeb906448e3055e91`
   - `train_test_split_seed`: $42$
+  - `split_provenance`: Canonical Phase 3 stratified holdout partition (80/20 train/test split, random_state=42, stratify=Churn) recorded in `data/splits/split_manifest.json`
   - `model_family`: `HistGradientBoostingClassifier`
+  - `model_name`: `Hist Gradient Boosting (Tuned)`
+  - `preprocessing_pipeline`: `baseline_tree`
   - `feature_count`: $47$
   - `hyperparameters`: `{'l2_regularization': 5.0, 'learning_rate': 0.03, 'max_iter': 150, 'max_leaf_nodes': 15, 'min_samples_leaf': 40}`
-  - `cv_metrics_mean` & `cv_metrics_std` across all 8 metrics
-  - `holdout_metrics` from the single test evaluation
+  - `cv_strategy`: `StratifiedKFold(n_splits=5, shuffle=True, random_state=42)`
+  - `cv_metrics_mean` & `cv_metrics_std` across all 8 metrics (tuned estimator CV on training partition)
+  - `holdout_metrics` from the single test evaluation ($N=1,409$)
+  - `evaluation_notes`: Training-only CV vs single holdout evaluation; scores are model-estimated probabilities, not calibrated; calibration deferred to Phase 5.
   - `environment`: Python 3.12.10, scikit-learn 1.6.1, pandas 2.3.1, numpy 2.3.2, joblib 1.5.3
 
 ---
 
 ## 10. Phase 4 Scope Limitations & Phase 5 Readiness
 
-1. **Uncalibrated Output Probabilities**:
-   - The predicted scores output by `HistGradientBoosting` are raw monotonic decision values passed through a sigmoid function.
-   - They exhibit minor miscalibration (evident in the Brier Score of $0.1351$ and the default threshold precision/recall trade-off).
-   - **Phase 5 Mandate**: Implement formal probability calibration (Isotonic Regression vs. Platt Scaling via `CalibratedClassifierCV`) to ensure predicted probabilities reflect true empirical risk.
+1. **Uncalibrated Model-Estimated Probabilities**:
+   - The predicted scores output by `HistGradientBoostingClassifier.predict_proba()` are model-estimated class pseudo-probabilities generated by mapping raw monotonic decision margins through the logistic link.
+   - They must not automatically be described as calibrated probabilities.
+   - Lower cross-entropy log loss ($0.4121 \pm 0.0133$) reflects superior proper probabilistic scoring performance, but does not independently establish empirical calibration.
+   - **Phase 5 Mandate**: Implement formal calibration diagnostics (empirical reliability diagrams, calibration curves, Expected Calibration Error, Brier score decomposition into reliability and resolution) and post-hoc calibration methods (Platt scaling vs. Isotonic Regression via `CalibratedClassifierCV`).
 2. **Fixed Decision Threshold ($0.5$)**:
    - The default threshold produces $52.14\%$ recall and $65.66\%$ precision. In telecom churn intervention, false negatives (missed churners) are typically significantly more costly than false positives (outreach discounts to retained customers).
    - **Phase 5 Mandate**: Implement cost-sensitive utility curve analysis, threshold tuning, and business risk tiering.
@@ -238,3 +275,4 @@ The complete model artifact bundle was serialized to [`artifacts/model.joblib`](
 ---
 
 *Phase 4 experimentation, benchmarking, ablation, and holdout evaluation are complete. Standing by for Phase 5 instructions.*
+

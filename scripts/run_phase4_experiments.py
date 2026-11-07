@@ -174,6 +174,7 @@ def main() -> None:
         n_splits=5,
         random_state=settings.random_state,
     )
+    save_experiment_json(tuned_cv.model_dump(), "tuned_model_cv_results.json")
 
     # 5. Model Selection
     print("\n[Step 5/7] Selecting final candidate model based on cross-validation criteria...")
@@ -272,6 +273,7 @@ def main() -> None:
     metadata = {
         "dataset_sha256": manifest.raw_data_sha256,
         "train_test_split_seed": settings.random_state,
+        "split_provenance": "Canonical Phase 3 stratified holdout partition (80/20 train/test split, random_state=42, stratify=Churn) recorded in data/splits/split_manifest.json",
         "model_family": "HistGradientBoostingClassifier",
         "model_name": best_candidate.model_name,
         "preprocessing_pipeline": "baseline_tree",
@@ -283,6 +285,12 @@ def main() -> None:
         "cv_metrics_std": best_candidate.std_metrics,
         "holdout_metrics": holdout_res.metrics,
         "decision_threshold": 0.5,
+        "evaluation_notes": (
+            "cv_metrics_mean and cv_metrics_std represent training-only 5-fold cross-validation. "
+            "holdout_metrics represent single independent evaluation on protected holdout test set (N=1,409). "
+            "Output scores are model-estimated class probabilities, not calibrated probabilities. "
+            "Formal calibration analysis is deferred to Phase 5."
+        ),
     }
     artifact_path = save_model_artifact(refitted_final_pipeline, metadata)
     print(f"  Artifact successfully persisted: {artifact_path.resolve()}")

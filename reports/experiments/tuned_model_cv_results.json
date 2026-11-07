@@ -1,0 +1,86 @@
+{
+  "model_name": "Hist Gradient Boosting (Tuned)",
+  "n_splits": 5,
+  "fold_metrics": [
+    {
+      "average_precision": 0.6501169277354226,
+      "roc_auc": 0.8445421937860502,
+      "f1": 0.5648854961832062,
+      "precision": 0.6577777777777778,
+      "recall": 0.49498327759197325,
+      "balanced_accuracy": 0.7009940542549238,
+      "log_loss": 0.4177407633010439,
+      "brier_score": 0.13598613361305062,
+      "threshold": 0.5
+    },
+    {
+      "average_precision": 0.6406973251743435,
+      "roc_auc": 0.8332424506810141,
+      "f1": 0.5461393596986818,
+      "precision": 0.625,
+      "recall": 0.48494983277591974,
+      "balanced_accuracy": 0.6899386845039019,
+      "log_loss": 0.4305701678109229,
+      "brier_score": 0.1419514494155216,
+      "threshold": 0.5
+    },
+    {
+      "average_precision": 0.6909773110033721,
+      "roc_auc": 0.8458670608954163,
+      "f1": 0.6139705882352942,
+      "precision": 0.6816326530612244,
+      "recall": 0.5585284280936454,
+      "balanced_accuracy": 0.7321627647714604,
+      "log_loss": 0.41383028105654124,
+      "brier_score": 0.13287112204381832,
+      "threshold": 0.5
+    },
+    {
+      "average_precision": 0.6773843533725795,
+      "roc_auc": 0.8613352883201654,
+      "f1": 0.6134301270417423,
+      "precision": 0.6706349206349206,
+      "recall": 0.5652173913043478,
+      "balanced_accuracy": 0.732487922705314,
+      "log_loss": 0.39890077123569084,
+      "brier_score": 0.12927010805535913,
+      "threshold": 0.5
+    },
+    {
+      "average_precision": 0.6826029048861183,
+      "roc_auc": 0.8624253355602916,
+      "f1": 0.5930232558139535,
+      "precision": 0.7050691244239631,
+      "recall": 0.5117056856187291,
+      "balanced_accuracy": 0.7171587678395943,
+      "log_loss": 0.3993481178029981,
+      "brier_score": 0.12830302330665852,
+      "threshold": 0.5
+    }
+  ],
+  "mean_metrics": {
+    "average_precision": 0.6683557644343672,
+    "roc_auc": 0.8494824658485876,
+    "f1": 0.5862897653945757,
+    "precision": 0.6680228951795771,
+    "recall": 0.523076923076923,
+    "balanced_accuracy": 0.7145484388150388,
+    "log_loss": 0.41207802024143947,
+    "brier_score": 0.13367636728688165,
+    "threshold": 0.5
+  },
+  "std_metrics": {
+    "average_precision": 0.021759338368112075,
+    "roc_auc": 0.012341219657991695,
+    "f1": 0.030076423053297652,
+    "precision": 0.029666493001421455,
+    "recall": 0.03675888070644569,
+    "balanced_accuracy": 0.018896194900183953,
+    "log_loss": 0.013349034666470545,
+    "brier_score": 0.0055395931837070415,
+    "threshold": 0.0
+  },
+  "mean_fit_time": 0.49697486000004576,
+  "mean_score_time": 0.017952359999617327,
+  "warnings_encountered": []
+}

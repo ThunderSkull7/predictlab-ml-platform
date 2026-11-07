@@ -834,10 +834,34 @@ print("Selection Rationale:", selection["rationale"])"""
     )
 
     nb.cells.append(
-        nbf.v4.new_markdown_cell(
-            """## 5. One-Time Holdout Evaluation (Protected Test Set: N = 1,409)
+        nbf.v4.new_code_cell(
+            """with open(exp_dir / "tuned_model_cv_results.json") as f:
+    tuned_cv = json.load(f)
 
-The selected pipeline is refitted on full `X_train` and evaluated once on the untouched holdout test partition."""
+print("Tuned Model 5-Fold Cross-Validation Metrics (Mean ± Std):")
+for metric, mean_val in tuned_cv["mean_metrics"].items():
+    std_val = tuned_cv["std_metrics"].get(metric, 0.0)
+    print(f"  {metric:22s}: {mean_val:.4f} ± {std_val:.4f}")"""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_markdown_cell(
+            """## 5. One-Time Holdout Evaluation & Three-Tier Evidence Reconciliation
+
+The selected pipeline is refitted on the complete training partition ($N_{\\text{train}} = 5,634$) and evaluated once on the untouched holdout test partition ($N_{\\text{test}} = 1,409$).
+
+### Methodological Principles:
+1. **Three-Tier Evaluation**:
+   - **Tier 1 (Benchmark CV)**: Untuned baseline candidate evaluations across 5 folds.
+   - **Tier 2 (Tuned Model CV)**: Tuned estimator evaluations across 5 folds on $X_{\\text{train}}$. (Note: hyperparameter tuning on the same CV folds introduces potential slight optimistic selection bias; fold standard deviations measure split variability, not formal confidence intervals).
+   - **Tier 3 (Protected Holdout Test)**: Single, independent evaluation on held-out test data.
+2. **Proper Probabilistic Scoring vs Calibration**:
+   - `HistGradientBoostingClassifier.predict_proba()` produces model-estimated class probabilities, **not calibrated probabilities**.
+   - Log Loss and Brier Score are proper scoring rules measuring probabilistic error; lower log loss does not independently establish empirical calibration.
+   - Formal calibration analysis (calibration curves, Platt scaling, isotonic regression) is strictly deferred to Phase 5.
+3. **Permutation Importance Partition**:
+   - Permutation feature importances were computed strictly on the training partition ($X_{\\text{train}}, y_{\\text{train}}$) using `scoring="average_precision"`. The holdout partition was never accessed for feature ranking."""
         )
     )
 
@@ -846,11 +870,49 @@ The selected pipeline is refitted on full `X_train` and evaluated once on the un
             """with open(exp_dir / "holdout_evaluation.json") as f:
     holdout = json.load(f)
 
-print("Holdout Performance Metrics:")
-for metric, val in holdout["metrics"].items():
-    print(f"  {metric:22s}: {val:.4f}")
+with open(exp_dir / "tuned_model_cv_results.json") as f:
+    tuned_cv = json.load(f)
 
-cm = holdout["confusion_matrix"]
+df_bench = pd.read_csv(exp_dir / "model_benchmarks_summary.csv")
+untuned_row = df_bench[df_bench["Model"].str.contains("Hist Gradient Boosting") & ~df_bench["Model"].str.contains("Balanced")].iloc[0]
+
+comparison_records = []
+metrics_keys = [
+    ("average_precision", "Average Precision (PR-AUC)"),
+    ("roc_auc", "ROC-AUC"),
+    ("f1", "F1-Score"),
+    ("precision", "Precision"),
+    ("recall", "Recall"),
+    ("balanced_accuracy", "Balanced Accuracy"),
+    ("log_loss", "Log Loss"),
+    ("brier_score", "Brier Score"),
+]
+
+for key, label in metrics_keys:
+    untuned_val = untuned_row[key]
+    tuned_mean = tuned_cv["mean_metrics"][key]
+    tuned_std = tuned_cv["std_metrics"][key]
+    holdout_val = holdout["metrics"][key]
+    delta = holdout_val - tuned_mean
+    sigma_delta = delta / tuned_std if tuned_std > 0 else 0.0
+
+    comparison_records.append({
+        "Metric": label,
+        "Tier 1: Untuned CV (Mean ± Std)": str(untuned_val),
+        "Tier 2: Tuned CV (Mean ± Std)": f"{tuned_mean:.4f} ± {tuned_std:.4f}",
+        "Tier 3: Holdout Test": f"{holdout_val:.4f}",
+        "Delta (Holdout - Tuned CV)": f"{delta:+.4f}",
+        "Delta (σ)": f"{sigma_delta:+.2f} σ",
+    })
+
+df_three_tier = pd.DataFrame(comparison_records)
+display(df_three_tier)"""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_code_cell(
+            """cm = holdout["confusion_matrix"]
 print(f"\\nConfusion Matrix (Threshold={holdout['threshold']}):")
 print(f"  True Negatives:  {cm['true_negatives']:4d} | False Positives: {cm['false_positives']:4d}")
 print(f"  False Negatives: {cm['false_negatives']:4d} | True Positives:  {cm['true_positives']:4d}")"""
@@ -868,7 +930,7 @@ display(Image(filename=str(figures_dir / "20_holdout_confusion_matrix.png")))"""
         nbf.v4.new_markdown_cell(
             """## 6. Top Feature Importances & Model Artifact Verification
 
-We inspect the top 20 predictive features in the final fitted model (impurity-based importances) and verify artifact integrity."""
+We inspect the top 20 predictive features in the selected candidate (computed via permutation importance strictly on $X_{\\text{train}}$ using `scoring='average_precision'`) and verify serialized artifact integrity."""
         )
     )
 
