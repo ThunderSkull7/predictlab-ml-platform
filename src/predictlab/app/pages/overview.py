@@ -120,6 +120,12 @@ def render_overview_page() -> None:
         with ccol4:
             render_metric_card("Cost per Customer", f"${t_opt['total_cost']/5634:.2f}", f"Down from ${t_def['total_cost']/5634:.2f}", "positive")
 
+        st.caption(
+            "⚠️ **Financial Scenario Disclosure:** Illustrative cost scenario based on training-cohort out-of-fold predictions "
+            "and hypothetical cost assumptions ($C_{\\text{FN}} = \\$500, C_{\\text{FP}} = \\$100, C_{\\text{TP}} = \\$100, C_{\\text{TN}} = \\$0$). "
+            "Not measured business savings."
+        )
+
     # 4. Exploratory & Risk Tier Visualizations
     st.markdown('<div class="section-header"><h3>4. Operational Risk Tiers & Exploratory Insights</h3></div>', unsafe_allow_html=True)
     vcol1, vcol2 = st.columns(2)

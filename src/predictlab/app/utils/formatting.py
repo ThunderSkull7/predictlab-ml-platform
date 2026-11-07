@@ -23,7 +23,7 @@ def format_risk_tier_badge(tier: str) -> str:
 def format_status_pill(is_churn: bool, label: str | None = None) -> str:
     """Return HTML string for styled binary decision status pill."""
     if is_churn:
-        lbl = label or "Flagged for Retention Outreach"
+        lbl = label or "Flagged by Current Policy"
         return f'<span class="status-pill status-churn">{lbl}</span>'
-    lbl = label or "Retained (No Intervention)"
+    lbl = label or "Not Flagged by Current Policy"
     return f'<span class="status-pill status-retained">{lbl}</span>'

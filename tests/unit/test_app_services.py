@@ -20,6 +20,7 @@ from predictlab.app.services.inference_service import (
     get_inference_engine,
     run_batch_prediction,
     run_single_prediction,
+    validate_and_parse_batch_csv,
 )
 from predictlab.inference.schemas import InferenceValidationError
 
@@ -122,6 +123,137 @@ def test_run_batch_prediction_mixed_records() -> None:
     assert not last_r.is_valid
     assert last_r.error_message is not None
     assert "tenure" in last_r.error_message
+
+
+def test_validate_and_parse_batch_csv_empty() -> None:
+    """Test boundary case: empty CSV string, buffer, or header-only file."""
+    # Empty string
+    df, err = validate_and_parse_batch_csv("")
+    assert df is None
+    assert err is not None
+    assert "empty" in err.lower()
+
+    # Whitespace only
+    df, err = validate_and_parse_batch_csv("   \n\t  ")
+    assert df is None
+    assert err is not None
+    assert "empty" in err.lower()
+
+    # Empty bytes buffer
+    df, err = validate_and_parse_batch_csv(io.BytesIO(b""))
+    assert df is None
+    assert err is not None
+    assert "empty" in err.lower()
+
+    # Header only, 0 data rows
+    header_only = "gender,SeniorCitizen,Partner,Dependents\n"
+    df, err = validate_and_parse_batch_csv(io.StringIO(header_only))
+    assert df is None
+    assert err is not None
+    assert "empty" in err.lower()
+
+
+def test_validate_and_parse_batch_csv_invalid_encoding() -> None:
+    """Test boundary case: non-UTF8 binary encoding."""
+    # Invalid UTF-8 bytes (e.g. invalid sequence)
+    invalid_bytes = b"\xff\xfe\x00\x00\x99\x88\x77"
+    df, err = validate_and_parse_batch_csv(io.BytesIO(invalid_bytes))
+    assert df is None
+    assert err is not None
+    assert "Invalid file encoding" in err
+
+
+def test_validate_and_parse_batch_csv_malformed() -> None:
+    """Test boundary case: malformed CSV structure."""
+    # Inconsistent fields / corrupted CSV structure
+    malformed_csv = "col1,col2\nval1,val2\nval1,val2,val3,extra_unquoted\n"
+    df, err = validate_and_parse_batch_csv(malformed_csv)
+    assert df is None
+    assert err is not None
+    assert "Malformed CSV structure" in err or "Failed to read CSV" in err
+
+
+def test_validate_and_parse_batch_csv_limits_15000_and_15001() -> None:
+    """Test boundary cases: exactly 15,000 valid records vs 15,001 records limit."""
+    # Build single valid line
+    header = "gender,SeniorCitizen,Partner,Dependents,tenure,PhoneService,MultipleLines,InternetService,OnlineSecurity,OnlineBackup,DeviceProtection,TechSupport,StreamingTV,StreamingMovies,Contract,PaperlessBilling,PaymentMethod,MonthlyCharges,TotalCharges\n"
+    row = "Female,0,Yes,No,1,Yes,No,DSL,No,Yes,No,No,No,No,Month-to-month,Yes,Electronic check,29.85,29.85\n"
+
+    # Exactly 15,000 rows
+    content_15000 = header + (row * 15000)
+    df_15000, err_15000 = validate_and_parse_batch_csv(io.StringIO(content_15000), max_records=15000)
+    assert err_15000 is None
+    assert df_15000 is not None
+    assert len(df_15000) == 15000
+
+    # 15,001 rows: must be rejected before inference
+    content_15001 = header + (row * 15001)
+    df_15001, err_15001 = validate_and_parse_batch_csv(io.StringIO(content_15001), max_records=15000)
+    assert df_15001 is None
+    assert err_15001 is not None
+    assert "15,001 records" in err_15001
+    assert "exceeding the 15,000 record interactive limit" in err_15001
+
+
+def test_run_batch_prediction_all_records_valid(valid_customer_dict: dict[str, Any]) -> None:
+    """Test batch prediction when 100% of records are valid."""
+    engine = get_inference_engine()
+    records = [dict(valid_customer_dict) for _ in range(5)]
+    res = run_batch_prediction(engine, records, threshold=0.19)
+
+    assert res.total_records == 5
+    assert res.successful_predictions == 5
+    assert res.failed_predictions == 0
+    assert len(res.predictions) == 5
+    for i, pred in enumerate(res.predictions):
+        assert pred.record_index == i
+        assert pred.is_valid is True
+        assert pred.prediction is not None
+        assert 0.0 <= pred.prediction.estimated_probability <= 1.0
+        assert pred.prediction.predicted_class in (0, 1)
+        assert pred.prediction.predicted_label in ("Churned", "Retained")
+
+
+def test_run_batch_prediction_all_records_invalid(valid_customer_dict: dict[str, Any]) -> None:
+    """Test batch prediction when 100% of records are invalid."""
+    engine = get_inference_engine()
+    bad_record = dict(valid_customer_dict)
+    bad_record["MonthlyCharges"] = -999.0  # Invalid monthly charges
+
+    records = [dict(bad_record) for _ in range(4)]
+    res = run_batch_prediction(engine, records, threshold=0.19)
+
+    assert res.total_records == 4
+    assert res.successful_predictions == 0
+    assert res.failed_predictions == 4
+    assert len(res.predictions) == 4
+    for i, pred in enumerate(res.predictions):
+        assert pred.record_index == i
+        assert pred.is_valid is False
+        assert pred.prediction is None
+        assert pred.error_message is not None
+        assert "MonthlyCharges" in pred.error_message
+
+
+def test_run_batch_prediction_order_preservation(valid_customer_dict: dict[str, Any]) -> None:
+    """Test that input ordering is strictly preserved across arbitrary valid/invalid sequences."""
+    engine = get_inference_engine()
+    good_1 = dict(valid_customer_dict, tenure=1)
+    bad_2 = dict(valid_customer_dict, tenure=-5)
+    good_3 = dict(valid_customer_dict, tenure=72)
+    bad_4 = dict(valid_customer_dict, MonthlyCharges=-10.0)
+    good_5 = dict(valid_customer_dict, tenure=36)
+
+    records = [good_1, bad_2, good_3, bad_4, good_5]
+    res = run_batch_prediction(engine, records, threshold=0.19)
+
+    assert res.total_records == 5
+    assert res.successful_predictions == 3
+    assert res.failed_predictions == 2
+
+    # Check order
+    assert [p.record_index for p in res.predictions] == [0, 1, 2, 3, 4]
+    assert [p.is_valid for p in res.predictions] == [True, False, True, False, True]
 
 
 def test_data_service_stats_and_presets() -> None:

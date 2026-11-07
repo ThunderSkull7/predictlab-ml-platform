@@ -42,8 +42,8 @@ def test_format_status_pill() -> None:
     """Test HTML status pill formatting for binary predictions."""
     pill_churn = format_status_pill(is_churn=True)
     assert "status-churn" in pill_churn
-    assert "Flagged for Retention Outreach" in pill_churn
+    assert "Flagged by Current Policy" in pill_churn
 
     pill_retain = format_status_pill(is_churn=False)
     assert "status-retained" in pill_retain
-    assert "Retained (No Intervention)" in pill_retain
+    assert "Not Flagged by Current Policy" in pill_retain

@@ -87,13 +87,23 @@ def render_explainability_page() -> None:
         """
     )
 
-    # 3. Risk Tier Calibration & Decoupling Simulator
-    st.markdown('<div class="section-header"><h3>3. Operational Risk Tier Calibration & Decoupling</h3></div>', unsafe_allow_html=True)
+    # 3. Risk Tier Cohort Summary & Decoupling Simulator
+    st.markdown('<div class="section-header"><h3>3. Operational Risk Tier Cohort Summary</h3></div>', unsafe_allow_html=True)
     st.markdown(
         """
-        Customer retention workflows require distinct queue allocations for account managers.
-        Calibrated probabilities are partitioned into three contiguous risk tiers:
+        Calibrated probabilities are partitioned into three contiguous operational risk tiers to support workflow queue management.
+
+        **Population Reference:** The cohort shares and observed churn rates below are derived strictly from the **retrospective observational training cohort ($N = 5,634$)** under 5-fold out-of-fold cross-validation.
         """
+    )
+
+    render_callout(
+        "<strong>Methodological Distinction on Probability Calibration:</strong> Grouping scores into operational risk tiers "
+        "is an operational categorization for queue management; <em>tier grouping itself does not establish or create probability calibration</em>. "
+        "Probability calibration was independently evaluated and established using Sigmoid (Platt) scaling across proper scoring rules (Brier score and Expected Calibration Error). "
+        "The observed churn rates represent historical cohort frequencies within the retrospective dataset, not guaranteed event rates for individual accounts.",
+        title="Calibration vs Tier Grouping Boundary",
+        variant="info",
     )
 
     df_risk = load_risk_tier_summary()
@@ -148,7 +158,10 @@ def render_explainability_page() -> None:
         st.markdown("- **Operational Queue:**")
         render_risk_tier_badge(sim_tier)
         st.markdown("- **Binary Retention Action:**")
-        render_decision_badge(sim_action, "Flagged for Retention Incentive" if sim_action else "Standard Service (No Outreach)")
+        render_decision_badge(
+            sim_action,
+            "Flagged by Current Policy" if sim_action else "Not Flagged by Current Policy",
+        )
 
         if sim_action and sim_tier == "Low":
             st.warning(

@@ -9,7 +9,11 @@ import streamlit as st
 from predictlab.app.components.cards import render_callout, render_metric_card
 from predictlab.app.components.charts import render_batch_risk_donut_chart
 from predictlab.app.services.data_service import generate_sample_batch_csv
-from predictlab.app.services.inference_service import get_inference_engine, run_batch_prediction
+from predictlab.app.services.inference_service import (
+    get_inference_engine,
+    run_batch_prediction,
+    validate_and_parse_batch_csv,
+)
 from predictlab.app.utils.formatting import format_probability
 
 
@@ -70,29 +74,20 @@ def render_batch_analysis_page() -> None:
     with thresh_col2:
         st.caption(
             f"**Applied Decision Threshold:** `τ = {batch_threshold:.2f}` (Cost-optimal default: `0.19`). "
-            "Accounts with model-estimated churn probability ≥ threshold will be classified as 'Churned' (Action: Outreach)."
+            "Accounts with model-estimated churn probability ≥ threshold will be classified as 'Flagged by Current Policy'."
         )
 
     if uploaded_file is None:
         st.info("Upload a customer CSV above or click 'Download Sample Batch CSV' to get started.")
         return
 
-    # 2. Parse & Validate CSV
-    try:
-        df_raw = pd.read_csv(uploaded_file)
-    except Exception as read_err:
-        st.error(f"Failed to read CSV file: {read_err}")
+    # 2. Parse & Validate CSV via service
+    df_raw, parse_err = validate_and_parse_batch_csv(uploaded_file)
+    if parse_err is not None or df_raw is None:
+        st.error(parse_err)
         return
 
     n_raw = len(df_raw)
-    if n_raw == 0:
-        st.warning("The uploaded CSV file is empty. Please provide a file with at least one record.")
-        return
-
-    if n_raw > 15000:
-        st.error(f"Uploaded cohort contains {n_raw:,} records, exceeding the 15,000 record interactive limit.")
-        return
-
     st.success(f"File loaded successfully: **{uploaded_file.name}** ({n_raw:,} records)")
 
     # 3. Execute Vectorized Batch Inference
@@ -173,7 +168,7 @@ def render_batch_analysis_page() -> None:
                 "Row Index": r.record_index + 1,
                 "CustomerID": r.customer_id if r.customer_id is not None else f"REC-{r.record_index+1:04d}",
                 "Estimated Churn Probability": pred.estimated_probability,
-                "Binary Decision": "Churned (Outreach)" if is_churn else "Retained (Standard)",
+                "Binary Decision": "Flagged by Current Policy" if is_churn else "Not Flagged by Current Policy",
                 "Risk Tier": tier,
                 "Applied Threshold": pred.applied_threshold,
                 "Model Version": pred.model_version,
@@ -189,9 +184,9 @@ def render_batch_analysis_page() -> None:
 
     rcol1, rcol2, rcol3, rcol4 = st.columns(4)
     with rcol1:
-        render_metric_card("Flagged for Outreach", f"{churn_count:,}", f"{churn_count / n_valid * 100:.1f}% of Scored", "warning")
+        render_metric_card("Flagged by Current Policy", f"{churn_count:,}", f"{churn_count / n_valid * 100:.1f}% of Scored", "warning")
     with rcol2:
-        render_metric_card("Standard (Retained)", f"{retained_count:,}", f"{retained_count / n_valid * 100:.1f}% of Scored", "positive")
+        render_metric_card("Not Flagged by Policy", f"{retained_count:,}", f"{retained_count / n_valid * 100:.1f}% of Scored", "positive")
     with rcol3:
         render_metric_card("Mean Churn Probability", format_probability(avg_prob, decimals=1), "Cohort Average", "neutral")
     with rcol4:

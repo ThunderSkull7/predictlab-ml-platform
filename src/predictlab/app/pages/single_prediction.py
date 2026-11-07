@@ -234,7 +234,7 @@ def render_single_prediction_page() -> None:
         with pcol2:
             render_metric_card(
                 "Binary Decision",
-                "Action: Outreach" if res.predicted_class == 1 else "Action: Standard",
+                "Flagged by Current Policy" if res.predicted_class == 1 else "Not Flagged by Current Policy",
                 f"Threshold τ = {res.applied_threshold:.2f}",
                 "warning" if res.predicted_class == 1 else "positive",
             )
@@ -260,7 +260,10 @@ def render_single_prediction_page() -> None:
             render_risk_tier_badge(res.risk_tier or "Low")
         with b2:
             st.markdown("**Decision Status:**")
-            render_decision_badge(res.predicted_class == 1, res.predicted_label)
+            render_decision_badge(
+                res.predicted_class == 1,
+                "Flagged by Current Policy" if res.predicted_class == 1 else "Not Flagged by Current Policy",
+            )
 
         # Crucial Methodological Distinction Notice
         st.markdown("---")
@@ -268,17 +271,26 @@ def render_single_prediction_page() -> None:
         st.markdown(
             f"""
             This prediction demonstrates why the **Operating Decision Threshold** and **Risk Tiers** are intentionally decoupled:
-            - **Decision Threshold ($\tau = {res.applied_threshold:.2f}$)** determines immediate binary action:
-              {'<span style="color:#F97316; font-weight:bold;">Flagged for Retention Outreach</span>' if res.predicted_class == 1 else '<span style="color:#10B981; font-weight:bold;">Standard Operational Service (No Outreach Discount)</span>'}.
+            - **Decision Threshold ($\tau = {res.applied_threshold:.2f}$)** determines model-based classification:
+              {'<span style="color:#F97316; font-weight:bold;">Flagged by Current Policy</span>' if res.predicted_class == 1 else '<span style="color:#10B981; font-weight:bold;">Not Flagged by Current Policy</span>'}.
             - **Risk Tier ({res.risk_tier} Risk)** partitions accounts into broad lifecycle workflows:
               Low `[0.00, 0.20)`, Medium `[0.20, 0.50)`, High `[0.50, 1.00]`.
             """
             + (
-                f"> **Important Boundary Case:** Notice that a probability of `{res.estimated_probability:.2f}` produces an active intervention flag (since `{res.estimated_probability:.2f} ≥ {res.applied_threshold:.2f}`), while remaining in the **Low Risk Tier** (`< 0.20`). The two systems serve distinct operational functions and must not be merged."
+                f"> **Important Boundary Case:** Notice that a probability of `{res.estimated_probability:.2f}` produces an active classification flag (since `{res.estimated_probability:.2f} ≥ {res.applied_threshold:.2f}`), while remaining in the **Low Risk Tier** (`< 0.20`). The two systems serve distinct operational functions and must not be merged."
                 if (res.predicted_class == 1 and res.risk_tier == "Low")
                 else ""
             ),
             unsafe_allow_html=True,
+        )
+
+        render_callout(
+            "<strong>Decision Policy Disclaimer:</strong> Classifications as <em>'Flagged by Current Policy'</em> or "
+            "<em>'Not Flagged by Current Policy'</em> represent model-based classifications under the currently selected operating threshold (τ). "
+            "These are statistical categorizations within a retrospective cross-sectional model and are <strong>not guarantees of future customer behavior</strong>, "
+            "nor do they constitute a clinical or commercial recommendation that intervention is unnecessary for unflagged accounts.",
+            title="Policy Classification & Intervention Disclaimer",
+            variant="warning",
         )
 
         render_callout(
