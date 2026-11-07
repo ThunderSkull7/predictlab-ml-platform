@@ -97,9 +97,26 @@ def save_model_artifact(
     target_path = Path(file_path) if file_path is not None else settings.artifacts_dir / "model.joblib"
     target_path.parent.mkdir(parents=True, exist_ok=True)
 
+    # Clean evaluation metric dictionaries to ensure threshold is separate from actual metrics
+    clean_metadata = dict(metadata)
+    if "cv_metrics_mean" in clean_metadata and isinstance(clean_metadata["cv_metrics_mean"], dict):
+        clean_metadata["cv_metrics_mean"] = {
+            k: v for k, v in clean_metadata["cv_metrics_mean"].items() if k != "threshold"
+        }
+    if "cv_metrics_std" in clean_metadata and isinstance(clean_metadata["cv_metrics_std"], dict):
+        clean_metadata["cv_metrics_std"] = {
+            k: v for k, v in clean_metadata["cv_metrics_std"].items() if k != "threshold"
+        }
+    if "holdout_metrics" in clean_metadata and isinstance(clean_metadata["holdout_metrics"], dict):
+        clean_metadata["holdout_metrics"] = {
+            k: v for k, v in clean_metadata["holdout_metrics"].items() if k != "threshold"
+        }
+    if "decision_threshold" not in clean_metadata:
+        clean_metadata["decision_threshold"] = 0.5
+
     # Attach timestamp and environment metadata
     enriched_metadata = {
-        **metadata,
+        **clean_metadata,
         "saved_at_utc": datetime.now(UTC).isoformat(),
         "environment": get_environment_metadata(),
     }

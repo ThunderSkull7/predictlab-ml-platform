@@ -13,7 +13,7 @@ The initial machine learning task is formulated as:
 The initial dataset is the canonical IBM Telco Customer Churn sample dataset. Because this dataset is a single static cross-sectional table lacking observation timestamps, event logs, or longitudinal customer histories, the system models statistical patterns distinguishing accounts that churned from accounts that remained active within the snapshot.
 
 PredictLab distinguishes four distinct levels of model outputs:
-1. **Raw Model-Estimated Score / Pseudo-Probability** ($\hat{s}_i \in [0, 1]$): Uncalibrated score produced by an estimator.
+1. **Model-Estimated Class Probability (Uncalibrated)** ($\hat{s}_i \in [0, 1]$): Model-estimated class probabilities that have not yet undergone empirical calibration assessment.
 2. **Empirically Calibrated Probability** ($\hat{p}_i = P(Y=1 \mid \hat{s}_i)$): Evaluated in Phase 5 via Brier score, Expected Calibration Error (ECE), and reliability curves.
 3. **Binary Classification Decision** ($\hat{Y}_i \in \{0, 1\}$): Thresholding decision using an explicit decision cutoff $\tau$ (deferred to Phase 5).
 4. **Business Risk Tiers**: Categorical prioritization tiers (e.g., Low, Medium, High). Boundaries are deferred to Phase 5 based on empirical score distributions and business utility policies.

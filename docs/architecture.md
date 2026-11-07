@@ -146,7 +146,7 @@ predictlab-ml-platform/
 
 To avoid methodological ambiguity, PredictLab enforces precise distinctions across model outputs:
 
-1. **Raw Model Scores / Pseudo-Probabilities**: Estimator outputs (e.g., logistic sigmoid or tree fraction scores). Not assumed to represent true empirical event probabilities.
+1. **Model-Estimated Class Probabilities (Uncalibrated)**: Model-estimated class probabilities that have not yet undergone empirical calibration assessment (e.g., logistic sigmoid or tree fraction scores). Not assumed to represent true empirical event probabilities.
 2. **Empirically Calibrated Probabilities**: Post-processed probabilities validated against true empirical event frequencies. Evaluated in Phase 5 using Brier score, Expected Calibration Error (ECE), and reliability curves.
 3. **Binary Decisions**: Obtained by applying an explicit threshold $\tau \in (0, 1)$, deferred to Phase 5.
 4. **Business Risk Tiers**: Prioritization segments (e.g., Low, Medium, High). Threshold selection is explicitly deferred until actual model outputs and business utility policies are defined in Phase 5.

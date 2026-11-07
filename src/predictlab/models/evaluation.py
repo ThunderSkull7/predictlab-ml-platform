@@ -122,7 +122,6 @@ def compute_classification_metrics(
         "balanced_accuracy": balanced_acc,
         "log_loss": ll,
         "brier_score": brier,
-        "threshold": float(threshold),
     }
 
 

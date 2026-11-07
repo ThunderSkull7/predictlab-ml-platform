@@ -857,10 +857,14 @@ The selected pipeline is refitted on the complete training partition ($N_{\\text
    - **Tier 2 (Tuned Model CV)**: Tuned estimator evaluations across 5 folds on $X_{\\text{train}}$. (Note: hyperparameter tuning on the same CV folds introduces potential slight optimistic selection bias; fold standard deviations measure split variability, not formal confidence intervals).
    - **Tier 3 (Protected Holdout Test)**: Single, independent evaluation on held-out test data.
 2. **Proper Probabilistic Scoring vs Calibration**:
-   - `HistGradientBoostingClassifier.predict_proba()` produces model-estimated class probabilities, **not calibrated probabilities**.
+   - `HistGradientBoostingClassifier.predict_proba()` produces model-estimated class probabilities that have not yet undergone empirical calibration assessment. They must not be described as calibrated probabilities.
    - Log Loss and Brier Score are proper scoring rules measuring probabilistic error; lower log loss does not independently establish empirical calibration.
-   - Formal calibration analysis (calibration curves, Platt scaling, isotonic regression) is strictly deferred to Phase 5.
-3. **Permutation Importance Partition**:
+   - Formal calibration analysis (calibration curves, reliability diagrams, Platt scaling, isotonic regression) is strictly deferred to Phase 5.
+3. **Generalization vs Leakage**:
+   - The similarity between training-only cross-validation results and the protected holdout results is consistent with reasonable generalization on this dataset. It does not independently prove the absence of leakage (which is instead safeguarded by strict pre-split partitioning and fold-level encapsulation).
+4. **Permutation Importance Definition & Partition**:
+   - Permutation importance measures the decrease in a model's predictive score after a feature's values are shuffled. It estimates model reliance on that feature under the selected scoring procedure; it does not establish causality or conditional dependence.
+   - Correlated predictors can dilute or distort individual feature importance estimates.
    - Permutation feature importances were computed strictly on the training partition ($X_{\\text{train}}, y_{\\text{train}}$) using `scoring="average_precision"`. The holdout partition was never accessed for feature ranking."""
         )
     )

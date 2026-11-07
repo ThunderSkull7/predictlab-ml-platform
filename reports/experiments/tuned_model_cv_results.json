@@ -66,8 +66,7 @@
     "recall": 0.523076923076923,
     "balanced_accuracy": 0.7145484388150388,
     "log_loss": 0.41207802024143947,
-    "brier_score": 0.13367636728688165,
-    "threshold": 0.5
+    "brier_score": 0.13367636728688165
   },
   "std_metrics": {
     "average_precision": 0.021759338368112075,
@@ -77,10 +76,10 @@
     "recall": 0.03675888070644569,
     "balanced_accuracy": 0.018896194900183953,
     "log_loss": 0.013349034666470545,
-    "brier_score": 0.0055395931837070415,
-    "threshold": 0.0
+    "brier_score": 0.0055395931837070415
   },
   "mean_fit_time": 0.49697486000004576,
   "mean_score_time": 0.017952359999617327,
-  "warnings_encountered": []
+  "warnings_encountered": [],
+  "decision_threshold": 0.5
 }

@@ -53,13 +53,13 @@ To maintain scientific precision, PredictLab strictly distinguishes four levels 
 
 ```mermaid
 graph LR
-    A[Raw Model Score / Pseudo-Probability<br/>f_x in 0, 1] --> B[Empirically Calibrated Probability<br/>P_hat in 0, 1]
-    B --> C[Binary Classification Decision<br/>Y_hat in 0, 1 via threshold tau]
-    B --> D[Business Risk Tier<br/>Rank-ordered priority tiers]
+    A["Model-Estimated Probability (Uncalibrated)<br/>f_x in 0, 1"] --> B["Empirically Calibrated Probability<br/>P_hat in 0, 1"]
+    B --> C["Binary Classification Decision<br/>Y_hat in 0, 1 via threshold tau"]
+    B --> D["Business Risk Tier<br/>Rank-ordered priority tiers"]
 ```
 
-1. **Raw Model-Estimated Score / Pseudo-Probability ($\hat{s}_i \in [0, 1]$)**:
-   - The uncalibrated continuous output produced directly by an estimator (e.g., tree ensemble leaf fractions, logistic sigmoid outputs).
+1. **Model-Estimated Class Probability (Uncalibrated) ($\hat{s}_i \in [0, 1]$)**:
+   - Model-estimated class probabilities that have not yet undergone empirical calibration assessment (e.g., tree ensemble leaf fractions, logistic sigmoid outputs).
    - Raw scores frequently suffer from systematic distortion (e.g., over-confidence in boosted trees or compression in support vector machines).
 2. **Empirically Calibrated Probability ($\hat{p}_i = P(Y_i = 1 \mid \hat{s}_i)$)**:
    - A probability score whose empirical reliability has been demonstrated and verified on held-out validation data (such that of accounts assigned $\hat{p} \approx 0.70$, approximately 70% actually churned).

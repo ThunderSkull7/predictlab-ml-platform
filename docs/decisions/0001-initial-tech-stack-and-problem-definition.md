@@ -25,7 +25,7 @@ PredictLab is designed as a portfolio-grade predictive analytics platform. Phase
 
 ### 3. Model Output Terminology & Phased Governance
 - PredictLab strictly distinguishes four output levels:
-  1. Raw Model Score / Pseudo-Probability ($\hat{s}_i \in [0, 1]$).
+  1. Model-Estimated Class Probability (Uncalibrated) ($\hat{s}_i \in [0, 1]$): Model-estimated class probabilities that have not yet undergone empirical calibration assessment.
   2. Empirically Calibrated Probability ($\hat{p}_i = P(Y_i = 1 \mid \hat{s}_i)$).
   3. Binary Classification Decision ($\hat{Y}_i \in \{0, 1\}$ via threshold $\tau$).
   4. Business Risk Tier (e.g., Low, Medium, High).

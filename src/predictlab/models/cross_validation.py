@@ -119,7 +119,7 @@ def evaluate_pipeline_cv(
         fold_metrics.append(metrics)
 
     # Aggregate metric statistics
-    metric_keys = list(fold_metrics[0].keys())
+    metric_keys = [k for k in fold_metrics[0].keys() if k != "threshold"]
     mean_metrics = {k: float(np.mean([m[k] for m in fold_metrics])) for k in metric_keys}
     std_metrics = {k: float(np.std([m[k] for m in fold_metrics], ddof=1)) for k in metric_keys}
 

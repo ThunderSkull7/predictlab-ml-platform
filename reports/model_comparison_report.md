@@ -11,7 +11,7 @@ Phase 4 establishes an empirical machine-learning benchmarking framework using t
 - A comprehensive **experimental feature ablation study** empirically evaluated whether the Phase 3.1 52-feature experimental pipeline provided predictive lift over the canonical 47-feature baseline.
 - The tuned **Histogram Gradient Boosting Classifier** was selected as the champion model family, achieving a cross-validated Average Precision (PR-AUC) of **0.6684** (±0.0218), ROC-AUC of **0.8495** (±0.0123), and Log Loss of **0.4121** (±0.0133).
 - A single final evaluation on the protected holdout test set demonstrated strong generalization with PR-AUC of **0.6617**, ROC-AUC of **0.8481**, and Log Loss of **0.4139**.
-- **Model-Estimated Pseudo-Probabilities**: Output scores produced by `HistGradientBoostingClassifier.predict_proba()` represent model-estimated class probabilities, **not calibrated probabilities**. Lower log loss reflects superior proper scoring performance rather than empirical calibration. Formal calibration analysis (calibration curves, Platt scaling, isotonic regression) is deferred to Phase 5.
+- **Model-Estimated Class Probabilities**: Output scores produced by `HistGradientBoostingClassifier.predict_proba()` represent model-estimated class probabilities that have not yet undergone empirical calibration assessment. They must not be described as calibrated probabilities. Lower log loss reflects superior proper scoring performance rather than empirical calibration. Formal calibration analysis (calibration curves, reliability diagrams, Platt scaling, isotonic regression) is deferred to Phase 5.
 - **Strict Data Partitioning for Importance & Holdout**: Permutation feature importance was evaluated strictly on the training partition ($X_{\text{train}}, y_{\text{train}}$) using `scoring="average_precision"`. The holdout test set ($N=1,409$) was evaluated strictly once for final independent performance estimation.
 
 > [!IMPORTANT]
@@ -195,7 +195,7 @@ The holdout test metrics track the tuned cross-validation estimates with remarka
 - ROC-AUC delta is $-0.0014$, within $0.11$ standard deviations of the cross-validation mean.
 - Log Loss delta is $+0.0018$, within $0.14$ standard deviations of the cross-validation mean.
 - F1 delta is $-0.0051$ (within $0.17 \sigma$) and Balanced Accuracy delta is $-0.0031$ (within $0.16 \sigma$).
-- This empirical alignment demonstrates that the strict fold-level pipeline encapsulation completely prevented information leakage, ensuring that the cross-validation estimate served as a reliable predictor of out-of-sample performance. The minor negative shifts are consistent with expected selection shrinkage from tuning rather than test-set overfitting.
+- The similarity between training-only cross-validation results and the protected holdout results is consistent with reasonable generalization on this dataset. It does not independently prove the absence of leakage (which is instead safeguarded and verified by our architectural controls: strict pre-split partitioning, fold-level pipeline encapsulation, and empirical leakage invariance tests). The minor negative shifts are consistent with expected selection shrinkage from tuning rather than test-set overfitting.
 
 ---
 
@@ -230,7 +230,7 @@ In preparation for Phase 5 (Explainability & Threshold Analysis), feature import
 ![Top 20 Features](figures/21_feature_importances_top20.png)
 
 > [!NOTE]
-> **Methodological Nuance on Feature Importance**: Permutation importance measures how heavily the model relies on a specific feature to maintain ranking accuracy. It does not imply direct causal intervention effects. For instance, `Contract_Month-to-month` is strongly predictive because customers planning to cancel voluntarily select month-to-month terms, not solely because the contract structure itself causes attrition.
+> **Methodological Definition of Feature Importance**: Permutation importance measures the decrease in a model's predictive score after a feature's values are shuffled. It estimates model reliance on that feature under the selected scoring procedure; it does not establish causality or conditional dependence. Furthermore, when correlated predictors are present (e.g., `tenure`, `MonthlyCharges`, and `TotalCharges`, or component service indicators and `OptionalServiceCount`), correlated predictors can dilute or distort individual feature importance estimates because the information remains partially accessible to the model through collinear features.
 
 ---
 
@@ -251,9 +251,10 @@ The complete model artifact bundle was serialized to [`artifacts/model.joblib`](
   - `feature_count`: $47$
   - `hyperparameters`: `{'l2_regularization': 5.0, 'learning_rate': 0.03, 'max_iter': 150, 'max_leaf_nodes': 15, 'min_samples_leaf': 40}`
   - `cv_strategy`: `StratifiedKFold(n_splits=5, shuffle=True, random_state=42)`
-  - `cv_metrics_mean` & `cv_metrics_std` across all 8 metrics (tuned estimator CV on training partition)
+  - `cv_metrics_mean` & `cv_metrics_std` across all 8 metrics (tuned estimator CV on training partition; `threshold` excluded)
+  - `decision_threshold`: $0.5$ (preserved separately)
   - `holdout_metrics` from the single test evaluation ($N=1,409$)
-  - `evaluation_notes`: Training-only CV vs single holdout evaluation; scores are model-estimated probabilities, not calibrated; calibration deferred to Phase 5.
+  - `evaluation_notes`: Training-only CV vs single holdout evaluation; scores are model-estimated class probabilities that have not yet undergone empirical calibration assessment; calibration deferred to Phase 5.
   - `environment`: Python 3.12.10, scikit-learn 1.6.1, pandas 2.3.1, numpy 2.3.2, joblib 1.5.3
 
 ---
@@ -261,8 +262,8 @@ The complete model artifact bundle was serialized to [`artifacts/model.joblib`](
 ## 10. Phase 4 Scope Limitations & Phase 5 Readiness
 
 1. **Uncalibrated Model-Estimated Probabilities**:
-   - The predicted scores output by `HistGradientBoostingClassifier.predict_proba()` are model-estimated class pseudo-probabilities generated by mapping raw monotonic decision margins through the logistic link.
-   - They must not automatically be described as calibrated probabilities.
+   - The predicted scores output by `HistGradientBoostingClassifier.predict_proba()` are model-estimated class probabilities that have not yet undergone empirical calibration assessment.
+   - They must not be described as calibrated probabilities.
    - Lower cross-entropy log loss ($0.4121 \pm 0.0133$) reflects superior proper probabilistic scoring performance, but does not independently establish empirical calibration.
    - **Phase 5 Mandate**: Implement formal calibration diagnostics (empirical reliability diagrams, calibration curves, Expected Calibration Error, Brier score decomposition into reliability and resolution) and post-hoc calibration methods (Platt scaling vs. Isotonic Regression via `CalibratedClassifierCV`).
 2. **Fixed Decision Threshold ($0.5$)**:

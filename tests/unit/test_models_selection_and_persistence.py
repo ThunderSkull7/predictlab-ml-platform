@@ -92,6 +92,10 @@ def test_model_artifact_save_and_reload() -> None:
         "dataset_sha256": "16320c9c1ec72448db59aa0a26a0b95401046bef5d02fd3aeb906448e3055e91",
         "model_name": "TestLR",
         "feature_count": 47,
+        "cv_metrics_mean": {"average_precision": 0.65, "threshold": 0.5},
+        "cv_metrics_std": {"average_precision": 0.02, "threshold": 0.0},
+        "holdout_metrics": {"average_precision": 0.64, "threshold": 0.5},
+        "decision_threshold": 0.5,
     }
 
     with tempfile.TemporaryDirectory() as tmp_dir:
@@ -105,6 +109,10 @@ def test_model_artifact_save_and_reload() -> None:
         assert bundle["metadata"]["model_name"] == "TestLR"
         assert bundle["metadata"]["feature_count"] == 47
         assert "environment" in bundle["metadata"]
+        assert "threshold" not in bundle["metadata"]["cv_metrics_mean"]
+        assert "threshold" not in bundle["metadata"]["cv_metrics_std"]
+        assert "threshold" not in bundle["metadata"]["holdout_metrics"]
+        assert bundle["metadata"]["decision_threshold"] == 0.5
 
         loaded_pipeline = bundle["pipeline"]
         loaded_preds = loaded_pipeline.predict_proba(X_test.iloc[:20])
