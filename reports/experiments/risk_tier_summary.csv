@@ -1,0 +1,4 @@
+risk_tier,probability_range,account_count,percent_of_cohort,mean_model_probability,observed_churn_rate,actual_churned_accounts,description
+Low,"[0.00, 0.20)",2959,52.52,0.0726,0.071,210,Accounts with low statistical churn indicators; routine operational engagement.
+Medium,"[0.20, 0.50)",1490,26.45,0.332,0.3268,487,Elevated attrition indicators; proactive satisfaction checks and contract reviews.
+High,"[0.50, 1.00]",1185,21.03,0.6628,0.6734,798,Substantial attrition indicators; eligible for retention discount or intervention.

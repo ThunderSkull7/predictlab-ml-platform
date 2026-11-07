@@ -1,0 +1,872 @@
+{
+  "sample_churner_explanation": {
+    "raw_input_features": {
+      "gender": "Female",
+      "SeniorCitizen": 0,
+      "Partner": "No",
+      "Dependents": "No",
+      "tenure": 5,
+      "PhoneService": "Yes",
+      "MultipleLines": "No",
+      "InternetService": "Fiber optic",
+      "OnlineSecurity": "No",
+      "OnlineBackup": "No",
+      "DeviceProtection": "No",
+      "TechSupport": "No",
+      "StreamingTV": "No",
+      "StreamingMovies": "Yes",
+      "Contract": "Month-to-month",
+      "PaperlessBilling": "Yes",
+      "PaymentMethod": "Electronic check",
+      "MonthlyCharges": 80.0,
+      "TotalCharges": "412.5"
+    },
+    "model_estimated_probability": 0.6868,
+    "applied_threshold": 0.18,
+    "predicted_class": 1,
+    "predicted_label": "Churned",
+    "base_value_margin": -1.5396,
+    "model_output_margin": 0.6903,
+    "top_churn_drivers": [
+      {
+        "feature": "cat__Contract_Month-to-month",
+        "clean_feature": "Contract_Month-to-month",
+        "feature_value": 1.0,
+        "shap_value": 0.88141,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "num__tenure",
+        "clean_feature": "tenure",
+        "feature_value": 5.0,
+        "shap_value": 0.40942,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "cat__InternetService_Fiber optic",
+        "clean_feature": "InternetService_Fiber optic",
+        "feature_value": 1.0,
+        "shap_value": 0.23047,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "cat__Contract_Two year",
+        "clean_feature": "Contract_Two year",
+        "feature_value": 0.0,
+        "shap_value": 0.21104,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "cat__OnlineSecurity_No",
+        "clean_feature": "OnlineSecurity_No",
+        "feature_value": 1.0,
+        "shap_value": 0.2081,
+        "impact_direction": "Increases Churn Risk"
+      }
+    ],
+    "top_retention_drivers": [
+      {
+        "feature": "cat__MultipleLines_No",
+        "clean_feature": "MultipleLines_No",
+        "feature_value": 1.0,
+        "shap_value": -0.18366,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__Contract_One year",
+        "clean_feature": "Contract_One year",
+        "feature_value": 0.0,
+        "shap_value": -0.03744,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__MultipleLines_Yes",
+        "clean_feature": "MultipleLines_Yes",
+        "feature_value": 0.0,
+        "shap_value": -0.01699,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__StreamingTV_No",
+        "clean_feature": "StreamingTV_No",
+        "feature_value": 1.0,
+        "shap_value": -0.01328,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__SeniorCitizen_0",
+        "clean_feature": "SeniorCitizen_0",
+        "feature_value": 1.0,
+        "shap_value": -0.0103,
+        "impact_direction": "Decreases Churn Risk"
+      }
+    ],
+    "all_attributions": [
+      {
+        "feature": "num__tenure",
+        "clean_feature": "tenure",
+        "feature_value": 5.0,
+        "shap_value": 0.40942,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "num__MonthlyCharges",
+        "clean_feature": "MonthlyCharges",
+        "feature_value": 80.0,
+        "shap_value": 0.07288,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "num__TotalCharges",
+        "clean_feature": "TotalCharges",
+        "feature_value": 412.5,
+        "shap_value": 0.02007,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "num__OptionalServiceCount",
+        "clean_feature": "OptionalServiceCount",
+        "feature_value": 1.0,
+        "shap_value": 0.00402,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "cat__gender_Female",
+        "clean_feature": "gender_Female",
+        "feature_value": 1.0,
+        "shap_value": 0.01225,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "cat__gender_Male",
+        "clean_feature": "gender_Male",
+        "feature_value": 0.0,
+        "shap_value": 0.00251,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "cat__SeniorCitizen_0",
+        "clean_feature": "SeniorCitizen_0",
+        "feature_value": 1.0,
+        "shap_value": -0.0103,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__SeniorCitizen_1",
+        "clean_feature": "SeniorCitizen_1",
+        "feature_value": 0.0,
+        "shap_value": -0.00161,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__Partner_No",
+        "clean_feature": "Partner_No",
+        "feature_value": 1.0,
+        "shap_value": 0.00012,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "cat__Partner_Yes",
+        "clean_feature": "Partner_Yes",
+        "feature_value": 0.0,
+        "shap_value": 0.0,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__Dependents_No",
+        "clean_feature": "Dependents_No",
+        "feature_value": 1.0,
+        "shap_value": 0.01072,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "cat__Dependents_Yes",
+        "clean_feature": "Dependents_Yes",
+        "feature_value": 0.0,
+        "shap_value": 0.00337,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "cat__PhoneService_No",
+        "clean_feature": "PhoneService_No",
+        "feature_value": 0.0,
+        "shap_value": -0.00478,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__PhoneService_Yes",
+        "clean_feature": "PhoneService_Yes",
+        "feature_value": 1.0,
+        "shap_value": -0.00044,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__MultipleLines_No",
+        "clean_feature": "MultipleLines_No",
+        "feature_value": 1.0,
+        "shap_value": -0.18366,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__MultipleLines_No phone service",
+        "clean_feature": "MultipleLines_No phone service",
+        "feature_value": 0.0,
+        "shap_value": 0.0,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__MultipleLines_Yes",
+        "clean_feature": "MultipleLines_Yes",
+        "feature_value": 0.0,
+        "shap_value": -0.01699,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__InternetService_DSL",
+        "clean_feature": "InternetService_DSL",
+        "feature_value": 0.0,
+        "shap_value": 0.02441,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "cat__InternetService_Fiber optic",
+        "clean_feature": "InternetService_Fiber optic",
+        "feature_value": 1.0,
+        "shap_value": 0.23047,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "cat__InternetService_No",
+        "clean_feature": "InternetService_No",
+        "feature_value": 0.0,
+        "shap_value": 0.0,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__OnlineSecurity_No",
+        "clean_feature": "OnlineSecurity_No",
+        "feature_value": 1.0,
+        "shap_value": 0.2081,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "cat__OnlineSecurity_No internet service",
+        "clean_feature": "OnlineSecurity_No internet service",
+        "feature_value": 0.0,
+        "shap_value": 0.0,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__OnlineSecurity_Yes",
+        "clean_feature": "OnlineSecurity_Yes",
+        "feature_value": 0.0,
+        "shap_value": 0.0002,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "cat__OnlineBackup_No",
+        "clean_feature": "OnlineBackup_No",
+        "feature_value": 1.0,
+        "shap_value": 0.10206,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "cat__OnlineBackup_No internet service",
+        "clean_feature": "OnlineBackup_No internet service",
+        "feature_value": 0.0,
+        "shap_value": 0.0,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__OnlineBackup_Yes",
+        "clean_feature": "OnlineBackup_Yes",
+        "feature_value": 0.0,
+        "shap_value": 0.00062,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "cat__DeviceProtection_No",
+        "clean_feature": "DeviceProtection_No",
+        "feature_value": 1.0,
+        "shap_value": 0.00101,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "cat__DeviceProtection_No internet service",
+        "clean_feature": "DeviceProtection_No internet service",
+        "feature_value": 0.0,
+        "shap_value": 0.0,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__DeviceProtection_Yes",
+        "clean_feature": "DeviceProtection_Yes",
+        "feature_value": 0.0,
+        "shap_value": -0.00169,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__TechSupport_No",
+        "clean_feature": "TechSupport_No",
+        "feature_value": 1.0,
+        "shap_value": 0.09434,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "cat__TechSupport_No internet service",
+        "clean_feature": "TechSupport_No internet service",
+        "feature_value": 0.0,
+        "shap_value": 0.0,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__TechSupport_Yes",
+        "clean_feature": "TechSupport_Yes",
+        "feature_value": 0.0,
+        "shap_value": 0.00038,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "cat__StreamingTV_No",
+        "clean_feature": "StreamingTV_No",
+        "feature_value": 1.0,
+        "shap_value": -0.01328,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__StreamingTV_No internet service",
+        "clean_feature": "StreamingTV_No internet service",
+        "feature_value": 0.0,
+        "shap_value": 0.0,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__StreamingTV_Yes",
+        "clean_feature": "StreamingTV_Yes",
+        "feature_value": 0.0,
+        "shap_value": -0.00058,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__StreamingMovies_No",
+        "clean_feature": "StreamingMovies_No",
+        "feature_value": 0.0,
+        "shap_value": 0.01475,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "cat__StreamingMovies_No internet service",
+        "clean_feature": "StreamingMovies_No internet service",
+        "feature_value": 0.0,
+        "shap_value": 0.0,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__StreamingMovies_Yes",
+        "clean_feature": "StreamingMovies_Yes",
+        "feature_value": 1.0,
+        "shap_value": 0.02443,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "cat__Contract_Month-to-month",
+        "clean_feature": "Contract_Month-to-month",
+        "feature_value": 1.0,
+        "shap_value": 0.88141,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "cat__Contract_One year",
+        "clean_feature": "Contract_One year",
+        "feature_value": 0.0,
+        "shap_value": -0.03744,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__Contract_Two year",
+        "clean_feature": "Contract_Two year",
+        "feature_value": 0.0,
+        "shap_value": 0.21104,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "cat__PaperlessBilling_No",
+        "clean_feature": "PaperlessBilling_No",
+        "feature_value": 0.0,
+        "shap_value": 0.06359,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "cat__PaperlessBilling_Yes",
+        "clean_feature": "PaperlessBilling_Yes",
+        "feature_value": 1.0,
+        "shap_value": 0.01731,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "cat__PaymentMethod_Bank transfer (automatic)",
+        "clean_feature": "PaymentMethod_Bank transfer (automatic)",
+        "feature_value": 0.0,
+        "shap_value": 0.00035,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "cat__PaymentMethod_Credit card (automatic)",
+        "clean_feature": "PaymentMethod_Credit card (automatic)",
+        "feature_value": 0.0,
+        "shap_value": 0.00111,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "cat__PaymentMethod_Electronic check",
+        "clean_feature": "PaymentMethod_Electronic check",
+        "feature_value": 1.0,
+        "shap_value": 0.08952,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "cat__PaymentMethod_Mailed check",
+        "clean_feature": "PaymentMethod_Mailed check",
+        "feature_value": 0.0,
+        "shap_value": 0.00022,
+        "impact_direction": "Increases Churn Risk"
+      }
+    ],
+    "methodological_limitations": "Local Shapley attributions allocate credit across features for the model's predicted log-odds margin relative to the expected training baseline. They quantify model behavior, NOT causal real-world intervention outcomes. Changing an input feature in reality may not alter churn propensity as estimated."
+  },
+  "sample_retained_explanation": {
+    "raw_input_features": {
+      "gender": "Male",
+      "SeniorCitizen": 0,
+      "Partner": "Yes",
+      "Dependents": "Yes",
+      "tenure": 13,
+      "PhoneService": "No",
+      "MultipleLines": "No phone service",
+      "InternetService": "DSL",
+      "OnlineSecurity": "Yes",
+      "OnlineBackup": "Yes",
+      "DeviceProtection": "No",
+      "TechSupport": "Yes",
+      "StreamingTV": "No",
+      "StreamingMovies": "No",
+      "Contract": "Two year",
+      "PaperlessBilling": "No",
+      "PaymentMethod": "Mailed check",
+      "MonthlyCharges": 40.55,
+      "TotalCharges": "590.35"
+    },
+    "model_estimated_probability": 0.0217,
+    "applied_threshold": 0.18,
+    "predicted_class": 0,
+    "predicted_label": "Retained",
+    "base_value_margin": -1.5396,
+    "model_output_margin": -3.6727,
+    "top_churn_drivers": [
+      {
+        "feature": "num__tenure",
+        "clean_feature": "tenure",
+        "feature_value": 13.0,
+        "shap_value": 0.13437,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "cat__PhoneService_No",
+        "clean_feature": "PhoneService_No",
+        "feature_value": 1.0,
+        "shap_value": 0.03175,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "cat__MultipleLines_No",
+        "clean_feature": "MultipleLines_No",
+        "feature_value": 0.0,
+        "shap_value": 0.01354,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "cat__StreamingMovies_No",
+        "clean_feature": "StreamingMovies_No",
+        "feature_value": 1.0,
+        "shap_value": 0.0128,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "num__TotalCharges",
+        "clean_feature": "TotalCharges",
+        "feature_value": 590.35,
+        "shap_value": 0.00545,
+        "impact_direction": "Increases Churn Risk"
+      }
+    ],
+    "top_retention_drivers": [
+      {
+        "feature": "cat__Contract_Month-to-month",
+        "clean_feature": "Contract_Month-to-month",
+        "feature_value": 0.0,
+        "shap_value": -0.84416,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__Contract_Two year",
+        "clean_feature": "Contract_Two year",
+        "feature_value": 1.0,
+        "shap_value": -0.51185,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__OnlineSecurity_No",
+        "clean_feature": "OnlineSecurity_No",
+        "feature_value": 0.0,
+        "shap_value": -0.16084,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "num__MonthlyCharges",
+        "clean_feature": "MonthlyCharges",
+        "feature_value": 40.55,
+        "shap_value": -0.14627,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__TechSupport_No",
+        "clean_feature": "TechSupport_No",
+        "feature_value": 0.0,
+        "shap_value": -0.13281,
+        "impact_direction": "Decreases Churn Risk"
+      }
+    ],
+    "all_attributions": [
+      {
+        "feature": "num__tenure",
+        "clean_feature": "tenure",
+        "feature_value": 13.0,
+        "shap_value": 0.13437,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "num__MonthlyCharges",
+        "clean_feature": "MonthlyCharges",
+        "feature_value": 40.55,
+        "shap_value": -0.14627,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "num__TotalCharges",
+        "clean_feature": "TotalCharges",
+        "feature_value": 590.35,
+        "shap_value": 0.00545,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "num__OptionalServiceCount",
+        "clean_feature": "OptionalServiceCount",
+        "feature_value": 3.0,
+        "shap_value": -0.00498,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__gender_Female",
+        "clean_feature": "gender_Female",
+        "feature_value": 0.0,
+        "shap_value": -0.0056,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__gender_Male",
+        "clean_feature": "gender_Male",
+        "feature_value": 1.0,
+        "shap_value": -0.00178,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__SeniorCitizen_0",
+        "clean_feature": "SeniorCitizen_0",
+        "feature_value": 1.0,
+        "shap_value": -0.015,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__SeniorCitizen_1",
+        "clean_feature": "SeniorCitizen_1",
+        "feature_value": 0.0,
+        "shap_value": -0.00315,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__Partner_No",
+        "clean_feature": "Partner_No",
+        "feature_value": 0.0,
+        "shap_value": -0.00263,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__Partner_Yes",
+        "clean_feature": "Partner_Yes",
+        "feature_value": 1.0,
+        "shap_value": 0.0,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__Dependents_No",
+        "clean_feature": "Dependents_No",
+        "feature_value": 0.0,
+        "shap_value": -0.04218,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__Dependents_Yes",
+        "clean_feature": "Dependents_Yes",
+        "feature_value": 1.0,
+        "shap_value": -0.00531,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__PhoneService_No",
+        "clean_feature": "PhoneService_No",
+        "feature_value": 1.0,
+        "shap_value": 0.03175,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "cat__PhoneService_Yes",
+        "clean_feature": "PhoneService_Yes",
+        "feature_value": 0.0,
+        "shap_value": 0.00249,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "cat__MultipleLines_No",
+        "clean_feature": "MultipleLines_No",
+        "feature_value": 0.0,
+        "shap_value": 0.01354,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "cat__MultipleLines_No phone service",
+        "clean_feature": "MultipleLines_No phone service",
+        "feature_value": 1.0,
+        "shap_value": 0.0,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__MultipleLines_Yes",
+        "clean_feature": "MultipleLines_Yes",
+        "feature_value": 0.0,
+        "shap_value": -0.00686,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__InternetService_DSL",
+        "clean_feature": "InternetService_DSL",
+        "feature_value": 1.0,
+        "shap_value": -0.00619,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__InternetService_Fiber optic",
+        "clean_feature": "InternetService_Fiber optic",
+        "feature_value": 0.0,
+        "shap_value": -0.12578,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__InternetService_No",
+        "clean_feature": "InternetService_No",
+        "feature_value": 0.0,
+        "shap_value": 0.0,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__OnlineSecurity_No",
+        "clean_feature": "OnlineSecurity_No",
+        "feature_value": 0.0,
+        "shap_value": -0.16084,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__OnlineSecurity_No internet service",
+        "clean_feature": "OnlineSecurity_No internet service",
+        "feature_value": 0.0,
+        "shap_value": 0.0,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__OnlineSecurity_Yes",
+        "clean_feature": "OnlineSecurity_Yes",
+        "feature_value": 1.0,
+        "shap_value": -0.00354,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__OnlineBackup_No",
+        "clean_feature": "OnlineBackup_No",
+        "feature_value": 0.0,
+        "shap_value": -0.08399,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__OnlineBackup_No internet service",
+        "clean_feature": "OnlineBackup_No internet service",
+        "feature_value": 0.0,
+        "shap_value": 0.0,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__OnlineBackup_Yes",
+        "clean_feature": "OnlineBackup_Yes",
+        "feature_value": 1.0,
+        "shap_value": -0.00116,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__DeviceProtection_No",
+        "clean_feature": "DeviceProtection_No",
+        "feature_value": 1.0,
+        "shap_value": 0.00239,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "cat__DeviceProtection_No internet service",
+        "clean_feature": "DeviceProtection_No internet service",
+        "feature_value": 0.0,
+        "shap_value": 0.0,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__DeviceProtection_Yes",
+        "clean_feature": "DeviceProtection_Yes",
+        "feature_value": 0.0,
+        "shap_value": -0.02576,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__TechSupport_No",
+        "clean_feature": "TechSupport_No",
+        "feature_value": 0.0,
+        "shap_value": -0.13281,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__TechSupport_No internet service",
+        "clean_feature": "TechSupport_No internet service",
+        "feature_value": 0.0,
+        "shap_value": 0.0,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__TechSupport_Yes",
+        "clean_feature": "TechSupport_Yes",
+        "feature_value": 1.0,
+        "shap_value": -0.00055,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__StreamingTV_No",
+        "clean_feature": "StreamingTV_No",
+        "feature_value": 1.0,
+        "shap_value": -0.00589,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__StreamingTV_No internet service",
+        "clean_feature": "StreamingTV_No internet service",
+        "feature_value": 0.0,
+        "shap_value": 0.0,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__StreamingTV_Yes",
+        "clean_feature": "StreamingTV_Yes",
+        "feature_value": 0.0,
+        "shap_value": -0.001,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__StreamingMovies_No",
+        "clean_feature": "StreamingMovies_No",
+        "feature_value": 1.0,
+        "shap_value": 0.0128,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "cat__StreamingMovies_No internet service",
+        "clean_feature": "StreamingMovies_No internet service",
+        "feature_value": 0.0,
+        "shap_value": 0.0,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__StreamingMovies_Yes",
+        "clean_feature": "StreamingMovies_Yes",
+        "feature_value": 0.0,
+        "shap_value": -0.03022,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__Contract_Month-to-month",
+        "clean_feature": "Contract_Month-to-month",
+        "feature_value": 0.0,
+        "shap_value": -0.84416,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__Contract_One year",
+        "clean_feature": "Contract_One year",
+        "feature_value": 0.0,
+        "shap_value": -0.05624,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__Contract_Two year",
+        "clean_feature": "Contract_Two year",
+        "feature_value": 1.0,
+        "shap_value": -0.51185,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__PaperlessBilling_No",
+        "clean_feature": "PaperlessBilling_No",
+        "feature_value": 1.0,
+        "shap_value": -0.05371,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__PaperlessBilling_Yes",
+        "clean_feature": "PaperlessBilling_Yes",
+        "feature_value": 0.0,
+        "shap_value": -0.01131,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__PaymentMethod_Bank transfer (automatic)",
+        "clean_feature": "PaymentMethod_Bank transfer (automatic)",
+        "feature_value": 0.0,
+        "shap_value": -0.00299,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__PaymentMethod_Credit card (automatic)",
+        "clean_feature": "PaymentMethod_Credit card (automatic)",
+        "feature_value": 0.0,
+        "shap_value": 0.00365,
+        "impact_direction": "Increases Churn Risk"
+      },
+      {
+        "feature": "cat__PaymentMethod_Electronic check",
+        "clean_feature": "PaymentMethod_Electronic check",
+        "feature_value": 0.0,
+        "shap_value": -0.04572,
+        "impact_direction": "Decreases Churn Risk"
+      },
+      {
+        "feature": "cat__PaymentMethod_Mailed check",
+        "clean_feature": "PaymentMethod_Mailed check",
+        "feature_value": 1.0,
+        "shap_value": -0.00208,
+        "impact_direction": "Decreases Churn Risk"
+      }
+    ],
+    "methodological_limitations": "Local Shapley attributions allocate credit across features for the model's predicted log-odds margin relative to the expected training baseline. They quantify model behavior, NOT causal real-world intervention outcomes. Changing an input feature in reality may not alter churn propensity as estimated."
+  }
+}

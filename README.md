@@ -27,6 +27,7 @@ PredictLab distinguishes four distinct levels of model outputs:
 | **Runtime** | Python | 3.12.10 |
 | **Data Processing** | Pandas, NumPy | 2.3.1 / 2.3.2 |
 | **Machine Learning** | Scikit-learn | 1.6.1 (exact pinned stack) |
+| **Explainability** | SHAP | 0.54.1 (TreeSHAP exact additive attributions) |
 | **Model Serialization** | Joblib | 1.5.3 |
 | **Validation & Settings** | Pydantic, Pydantic-Settings | 2.13.4 / 2.15.0 |
 | **Visualization** | Altair | 5.5.0 (exact pinned stack) |
@@ -79,7 +80,9 @@ predictlab-ml-platform/
 ├── notebooks/                         # Executed analytical notebooks
 │   ├── 01_data_audit.ipynb            # Data quality audit & TotalCharges investigation
 │   ├── 02_eda.ipynb                   # Comprehensive exploratory analysis & Q1-Q10 findings
-│   └── 03_preprocessing_and_feature_engineering.ipynb # Preprocessing pipeline, splitting & leakage audit
+│   ├── 03_preprocessing_and_feature_engineering.ipynb # Preprocessing pipeline, splitting & leakage audit
+│   ├── 04_model_training_and_comparison.ipynb         # Model exploration, baselines & tuning
+│   └── 05_evaluation_explainability_and_inference.ipynb # Probability calibration, thresholding, SHAP & inference engine
 │
 ├── src/
 │   └── predictlab/                    # Headless core Python package
@@ -114,6 +117,26 @@ predictlab-ml-platform/
 │           ├── tuning.py              # Controlled hyperparameter tuning on training partition
 │           ├── selection.py           # Objective model selection & holdout evaluation
 │           └── persistence.py         # Artifact bundle & experiment JSON serialization
+│       ├── calibration/               # Probability calibration & scoring rules (Phase 5)
+│       │   ├── __init__.py
+│       │   ├── metrics.py             # Brier score, Log Loss, ECE, Murphy decomposition
+│       │   ├── curves.py              # Reliability curves & probability distribution histograms
+│       │   ├── cross_validation.py    # Leakage-free 5x5 nested CV across calibration methods
+│       │   └── selection.py           # Multi-criteria calibration selection & ensemble refit
+│       ├── thresholding/              # Decision threshold analysis & risk tiers (Phase 5)
+│       │   ├── __init__.py
+│       │   ├── metrics.py             # 81-step threshold sweep across classification metrics
+│       │   ├── costs.py               # Configurable CostMatrix & cost ratio sensitivity
+│       │   ├── optimization.py        # Threshold optimization & nested CV policy optimism audit
+│       │   └── risk_tiers.py          # Contiguous 3-tier risk partitioner & cohort profiler
+│       ├── explainability/            # Global & local model interpretation (Phase 5)
+│       │   ├── __init__.py
+│       │   ├── global_importance.py   # Training-only permutation importance with Average Precision
+│       │   └── local_attribution.py   # TreeSHAP local attribution on model margin log-odds scale
+│       └── inference/                 # Production-grade single & batch inference (Phase 5)
+│           ├── __init__.py
+│           ├── schemas.py             # Pydantic v2 input/output schemas & predictor validation
+│           └── engine.py              # InferenceEngine with atomic & per-record batch modes
 │
 ├── app/                               # Streamlit UI application (Phase 6)
 ├── models/                            # Serialized model binaries (Phase 4-5)
@@ -123,8 +146,12 @@ predictlab-ml-platform/
 │   ├── eda_report.md                  # Detailed analytical findings & statistical test report
 │   ├── preprocessing_report.md        # Preprocessing, feature engineering & transformation report
 │   ├── model_comparison_report.md     # Model benchmarking, ablation & holdout evaluation report
+│   ├── calibration_report.md          # Probability calibration & reliability scoring report
+│   ├── threshold_analysis_report.md   # Decision threshold & cost sensitivity report
+│   ├── explainability_report.md       # Global & local TreeSHAP attribution report
+│   ├── inference_engine_report.md     # Production inference engine & schema validation report
 │   ├── experiments/                   # Experiment JSON/CSV metrics & tuning summaries
-│   └── figures/                       # 21 publication-grade visualizations
+│   └── figures/                       # 28 publication-grade visualizations (Figures 01-28)
 │
 ├── tests/
 │   ├── fixtures/
@@ -142,6 +169,11 @@ predictlab-ml-platform/
 │   │   ├── test_models_estimators.py       # Estimator pipeline construction tests
 │   │   ├── test_models_evaluation.py       # Metric & curve calculation tests
 │   │   ├── test_models_cross_validation.py # Stratified CV & fold isolation tests
+│   │   ├── test_calibration.py        # ECE, Brier decomposition & reliability tests
+│   │   ├── test_thresholding.py       # Threshold sweep & cost matrix tests
+│   │   ├── test_risk_tiering.py       # Risk tier partitioner & cohort profile tests
+│   │   ├── test_explainability.py     # Permutation importance & TreeSHAP tests
+│   │   └── test_inference.py          # InferenceEngine, schema validation & batch tests
 │   │   ├── test_models_experiments.py      # Feature ablation tests
 │   │   └── test_models_selection_and_persistence.py # Selection, tuning & persistence tests
 │   └── integration/
@@ -200,7 +232,19 @@ PredictLab is developed following a rigorous 7-phase engineering plan:
   - Serialized model bundle artifact (`artifacts/model.joblib`) with comprehensive provenance metadata.
   - Clean execution of `notebooks/04_model_training_and_comparison.ipynb` and comprehensive `reports/model_comparison_report.md`.
   - 92 passing automated unit and integration tests (100% pass rate) and clean Ruff static analysis.
-- [ ] **Phase 5: Probability Calibration, Threshold Tuning & Evaluation**
+- [x] **Phase 5: Probability Calibration, Threshold Tuning, Explainability & Production Inference**
+  - Modular packages `predictlab.calibration`, `predictlab.thresholding`, `predictlab.explainability`, and `predictlab.inference`.
+  - Leakage-free 5x5 nested cross-validation evaluating Uncalibrated, Sigmoid (Platt), and Isotonic calibration across proper scoring rules (Brier score, Log Loss), ECE (uniform and quantile binning), Murphy (1973) Brier score decomposition, and Cox calibration regression.
+  - Selected Sigmoid calibration as champion: Brier Score **0.1335 ± 0.0056**, Log Loss **0.4116 ± 0.0133**, PR-AUC **0.6697 ± 0.0215**, ROC-AUC **0.8498 ± 0.0123**, Quantile ECE **0.0265**.
+  - Systematic threshold grid sweep (81 points, 0.10 to 0.90) and financial cost matrix modeling. At a 5:1 loss ratio ($C_{\text{FN}} = \$500, C_{\text{FP}} = \$100$), cost-optimal threshold shifts to $\tau^* = 0.18$, boosting recall from $52.3\%$ to $88.1\%$, cutting missed churners from 713 to 178 ($75\%$ reduction in churn leakage), and saving $38.2\%$ in expected operational cost.
+  - Nested CV policy evaluation confirming minimal threshold selection optimism (optimism delta on F1: $+0.0022$).
+  - Contiguous customer risk tiers: Low ($[0.0, 0.20)$), Medium ($[0.20, 0.50)$), High ($[0.50, 1.00]$).
+  - Global permutation importance on $X_{\text{train}}$ with 10 repeats, highlighting Contract type, tenure, MonthlyCharges, and TechSupport, while accounting for collinear feature dilution.
+  - Local TreeSHAP attribution via `TreeShapExplainer` on model margin log-odds scale with top churn/retention drivers and non-causal interpretation warnings.
+  - Production-ready `InferenceEngine` supporting strict 19-predictor Pydantic v2 validation (`CustomerInputRecord`), zero-tenure `TotalCharges` whitespace handling, customerID stripping, atomic and per-record batch error handling modes, and deterministic scoring.
+  - Serialized production artifact `artifacts/model_phase5_calibrated.joblib`; preserved approved Phase 4 model at `artifacts/model_phase4.joblib`.
+  - Four dedicated Phase 5 markdown reports and executed `notebooks/05_evaluation_explainability_and_inference.ipynb`.
+  - 121 passing automated unit and integration tests (100% pass rate) and clean Ruff static analysis.
 - [ ] **Phase 6: Interactive Dashboard & Explainable Inference UI**
 - [ ] **Phase 7: Packaging, Verification & Production Readiness**
 

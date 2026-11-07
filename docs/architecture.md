@@ -76,16 +76,36 @@ predictlab-ml-platform/
 │   │   ├── transformers.py     # Scikit-learn compatible custom transformers
 │   │   ├── split.py            # Stratified holdout partitioning & manifest persistence
 │   │   └── pipelines.py        # Linear and tree ColumnTransformer pipeline factories
-│   └── models/                 # Model benchmarking, tuning, ablation & selection (Phase 4)
+│   ├── models/                 # Model benchmarking, tuning, ablation & selection (Phase 4)
+│   │   ├── __init__.py
+│   │   ├── baselines.py        # DummyClassifier benchmarks (prior, most_frequent)
+│   │   ├── estimators.py       # Candidate model factories (LR, RF, HistGradientBoosting)
+│   │   ├── evaluation.py       # Multi-metric evaluation (PR-AUC, ROC-AUC, F1, Log Loss)
+│   │   ├── cross_validation.py # Leakage-free Stratified 5-Fold cross-validation
+│   │   ├── experiments.py      # Benchmark runner & feature ablation studies
+│   │   ├── tuning.py           # Controlled hyperparameter tuning on training partition
+│   │   ├── selection.py        # Objective model selection & holdout evaluation
+│   │   └── persistence.py      # Artifact bundle and experiment JSON serialization
+│   ├── calibration/            # Probability calibration, curves & scoring rules (Phase 5)
+│   │   ├── __init__.py
+│   │   ├── metrics.py          # Brier score, Log Loss, ECE, Murphy decomposition, Cox regression
+│   │   ├── curves.py           # Calibration reliability curves & distribution histograms
+│   │   ├── cross_validation.py # Leakage-free 5x5 nested CV across calibration strategies
+│   │   └── selection.py        # Multi-criteria calibration selection & ensemble refit
+│   ├── thresholding/           # Decision threshold analysis & operational risk tiering (Phase 5)
+│   │   ├── __init__.py
+│   │   ├── metrics.py          # 81-step threshold sweep across classification metrics
+│   │   ├── costs.py            # Configurable CostMatrix & cost ratio sensitivity sweep
+│   │   ├── optimization.py     # Threshold optimization & nested CV policy optimism audit
+│   │   └── risk_tiers.py       # Contiguous 3-tier risk partitioner & cohort profiler
+│   ├── explainability/         # Global & local model interpretation (Phase 5)
+│   │   ├── __init__.py
+│   │   ├── global_importance.py # Training-only permutation importance with Average Precision
+│   │   └── local_attribution.py # TreeSHAP local attribution on model margin log-odds scale
+│   └── inference/              # Production-grade single & batch inference engine (Phase 5)
 │       ├── __init__.py
-│       ├── baselines.py        # DummyClassifier benchmarks (prior, most_frequent)
-│       ├── estimators.py       # Candidate model factories (LR, RF, HistGradientBoosting)
-│       ├── evaluation.py       # Multi-metric evaluation (PR-AUC, ROC-AUC, F1, Log Loss)
-│       ├── cross_validation.py # Leakage-free Stratified 5-Fold cross-validation
-│       ├── experiments.py      # Benchmark runner & feature ablation studies
-│       ├── tuning.py           # Controlled hyperparameter tuning on training partition
-│       ├── selection.py        # Objective model selection & holdout evaluation
-│       └── persistence.py      # Artifact bundle and experiment JSON serialization
+│       ├── schemas.py          # Pydantic v2 input/output schemas & predictor validation
+│       └── engine.py           # InferenceEngine with atomic & per-record batch error handling
 ├── app/                        # Streamlit web application (Phase 6)
 ├── models/                     # Serialized model binaries (Phase 4-5)
 ├── artifacts/                  # Serialized transformers, metrics, and figures
@@ -140,16 +160,36 @@ predictlab-ml-platform/
 - **Model Selection & Holdout Evaluation (`selection.py`)**: Programmatically selects the optimal candidate based on multi-criteria ranking and executes a single holdout evaluation on the protected test partition.
 - **Persistence (`persistence.py`)**: Serializes experiment reports to `reports/experiments/` and bundles the final fitted pipeline with complete provenance metadata to `artifacts/model.joblib`.
 
+### G. Probability Calibration (`predictlab.calibration`)
+- **Proper Scoring Rules & Metrics (`metrics.py`)**: Calculates Brier score, Log Loss, uniform and quantile Expected Calibration Error (ECE), Murphy (1973) Brier score decomposition (Reliability, Resolution, Uncertainty), and Cox calibration regression (intercept and slope).
+- **Reliability Curves (`curves.py`)**: Produces empirical reliability curve coordinates and probability distribution histograms.
+- **Nested Cross-Validation (`cross_validation.py`)**: Executes leakage-free 5x5 nested CV comparing uncalibrated, Sigmoid (Platt), and Isotonic calibration without data reuse.
+- **Calibration Champion Selection (`selection.py`)**: Automates objective multi-criteria calibration selection and refits winning `CalibratedClassifierCV` pipelines on the full training dataset.
+
+### H. Decision Thresholding & Cost Optimization (`predictlab.thresholding`)
+- **Systematic Threshold Sweeps (`metrics.py`)**: Evaluates 81 discrete thresholds ($\tau \in [0.10, 0.90]$) across Precision, Recall, Specificity, F1, F2, F0.5, Balanced Accuracy, and confusion counts.
+- **Cost-Sensitive Decision Modeling (`costs.py`)**: Implements configurable `CostMatrix` structures, calculating total operational risk cost, cost-per-customer, and cost sensitivity across asymmetric loss ratios ($C_{\text{FN}} : C_{\text{FP}}$ from 0.2:1 to 10:1).
+- **Policy Optimism Audit (`optimization.py`)**: Executes nested CV policy evaluation (`evaluate_threshold_policy_nested`) to quantify threshold selection optimism bias.
+- **Operational Customer Risk Tiers (`risk_tiers.py`)**: Enforces contiguous probability partitioning across Low ($[0.0, 0.20)$), Medium ($[0.20, 0.50)$), and High ($[0.50, 1.00]$) tiers with statistical cohort profiling.
+
+### I. Global & Local Explainability (`predictlab.explainability`)
+- **Global Permutation Importance (`global_importance.py`)**: Measures Average Precision drop across features on $X_{\text{train}}$ with 10 shuffle repeats, accounting for collinear feature dilution.
+- **Local TreeSHAP Attributions (`local_attribution.py`)**: Computes exact additive Shapley values on the model margin log-odds scale using `TreeShapExplainer`, identifying positive (churn-elevating) and negative (retention-stabilizing) feature drivers with explicit non-causal interpretation warnings.
+
+### J. Production-Ready Inference Engine (`predictlab.inference`)
+- **Strict Pydantic v2 Schemas (`schemas.py`)**: Validates the 19 raw customer predictors, handles zero-tenure `TotalCharges` whitespace strings safely, strips `customerID`, and returns structured single/batch prediction records.
+- **Unified Inference Engine (`engine.py`)**: Supports single-record scoring, high-throughput batch scoring, dual error-handling modes (`atomic` transactional validation vs `per_record` resilient isolation), configurable threshold overrides, risk tiering, and optional local TreeSHAP explanations.
+
 ---
 
 ## 4. Probabilistic Modeling Terminology & Phased Governance
 
 To avoid methodological ambiguity, PredictLab enforces precise distinctions across model outputs:
 
-1. **Model-Estimated Class Probabilities (Uncalibrated)**: Model-estimated class probabilities that have not yet undergone empirical calibration assessment (e.g., logistic sigmoid or tree fraction scores). Not assumed to represent true empirical event probabilities.
-2. **Empirically Calibrated Probabilities**: Post-processed probabilities validated against true empirical event frequencies. Evaluated in Phase 5 using Brier score, Expected Calibration Error (ECE), and reliability curves.
-3. **Binary Decisions**: Obtained by applying an explicit threshold $\tau \in (0, 1)$, deferred to Phase 5.
-4. **Business Risk Tiers**: Prioritization segments (e.g., Low, Medium, High). Threshold selection is explicitly deferred until actual model outputs and business utility policies are defined in Phase 5.
+1. **Model-Estimated Class Probabilities (Uncalibrated)**: Raw classifier outputs (e.g. tree fraction scores). Lower log loss reflects superior proper scoring rather than empirical calibration.
+2. **Empirically Calibrated Probabilities (Phase 5)**: Post-processed probabilities validated against true empirical event frequencies using Sigmoid (Platt) scaling, verified via Brier score ($0.1335$), Log Loss ($0.4116$), and reliability diagrams.
+3. **Binary Decisions (Phase 5)**: Derived by applying an explicit, cost-optimized threshold ($\tau^* = 0.18$), saving $38.2\%$ in operational retention cost over naive $0.50$ demarcation.
+4. **Business Risk Tiers (Phase 5)**: Standardized contiguous segments (Low $[0.0, 0.20)$, Medium $[0.20, 0.50)$, High $[0.50, 1.00]$) mapping continuous probabilities to tiered operational intervention workflows.
 
 ---
 

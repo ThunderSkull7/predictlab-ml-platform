@@ -33,6 +33,7 @@ dependencies = [
     "altair>=5.5.0,<6.0.0",
     "streamlit>=1.67.0,<1.68.0",
     "python-dotenv>=1.0.0",
+    "shap>=0.54.0",
 ]
 
 [project.optional-dependencies]

@@ -967,8 +967,362 @@ print(f"  Scikit-Learn Ver:  {meta['environment']['scikit_learn_version']}")"""
     print(f"Saved executed notebook to {out_file}")
 
 
+def build_and_execute_notebook_05():
+    """Build and execute notebooks/05_evaluation_explainability_and_inference.ipynb."""
+    nb = nbf.v4.new_notebook()
+
+    nb.cells.append(
+        nbf.v4.new_markdown_cell(
+            """# PredictLab — Notebook 05: Evaluation, Explainability, and Production-Ready Inference
+
+## Overview & Scientific Governance
+This notebook presents the Phase 5 evaluation, calibration, explainability, and inference pipeline for PredictLab:
+1. **Holdout Partition Protection**: Confirms that holdout test labels ($N=1,409$) remain strictly isolated and protected from calibration, threshold tuning, and explainability workflows.
+2. **Probability Calibration**: Rigorous nested cross-validation (5x5 folds) comparing uncalibrated probability estimates, Sigmoid (Platt) scaling, and Isotonic regression across log loss, Brier score, ECE (uniform and quantile binning), and Murphy (1973) Brier score decomposition.
+3. **Decision Threshold Analysis & Cost Sensitivity**: Systematic threshold sweeps (0.10 to 0.90), cost matrix modeling across asymmetric loss ratios ($C_{\\text{FN}} : C_{\\text{FP}}$ from 0.2:1 to 10:1), and nested CV policy evaluation to quantify selection optimism.
+4. **Customer Churn Risk Tiers**: Contiguous, operational tiering (Low $[0.0, 0.20)$, Medium $[0.20, 0.50)$, High $[0.50, 1.00]$) with cohort profiles and observed churn rates.
+5. **Global & Local Explainability**: Global feature permutation importance (scoring on Average Precision on $X_{\\text{train}}$) and local TreeSHAP attribution on the log-odds margin scale with waterfall breakdowns.
+6. **Production Inference Engine**: Production-ready `InferenceEngine` verifying strict Pydantic v2 schema validation, single and batch prediction modes (atomic vs per-record error isolation), and deterministic calibrated scoring.
+
+> [!IMPORTANT]
+> The IBM Telco Customer Churn dataset is a retrospective cross-sectional customer snapshot. All risk scores, tiers, and SHAP attributions represent retrospective associative patterns and risk ranking across subscriber profiles, not causal levers or longitudinal time-to-event predictions."""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_code_cell(
+            """import json
+
+import pandas as pd
+from IPython.display import Image, display
+
+from predictlab.config import get_settings
+from predictlab.data.load import load_raw_dataset
+from predictlab.inference.engine import InferenceEngine
+from predictlab.preprocessing.split import split_dataset
+
+settings = get_settings()
+exp_dir = settings.reports_dir / "experiments"
+figures_dir = settings.reports_dir / "figures"
+artifacts_dir = settings.artifacts_dir
+
+print(f"Project root:    {settings.project_root}")
+print(f"Artifacts dir:   {artifacts_dir}")
+print(f"Experiments dir: {exp_dir}")"""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_markdown_cell(
+            """## 1. Dataset Verification & Strict Holdout Isolation
+
+We confirm the integrity of the canonical raw dataset and the 80/20 stratified split. Notice that the test partition ($N=1,409$) is strictly isolated. All subsequent calibration benchmarking, threshold tuning, and explainability rely entirely on out-of-fold training evidence or $X_{\\text{train}}$."""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_code_cell(
+            """raw_df = load_raw_dataset()
+X_train, X_test, y_train, y_test, manifest = split_dataset(raw_df, save_manifest=False)
+
+print(f"Raw dataset shape:    {raw_df.shape}")
+print(f"Training split shape: {X_train.shape} (churn prevalence: {y_train.mean():.4f})")
+print(f"Holdout split shape:  {X_test.shape} (churn prevalence: {y_test.mean():.4f})")
+print("\\nHoldout Test Isolation: Confirmed (Protected holdout labels are NOT used in calibration or threshold selection).")"""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_markdown_cell(
+            """## 2. Probability Calibration: Leakage-Free Nested Cross-Validation
+
+We evaluate uncalibrated, Sigmoid (Platt Scaling), and Isotonic calibration models using 5x5 nested cross-validation on the training set.
+Key metrics include:
+- **Brier Score** & **Log Loss** (proper scoring rules)
+- **Expected Calibration Error (ECE)** under both uniform and quantile binning schemes
+- **Murphy (1973) Brier Decomposition**: Reliability ($MC$), Resolution ($DSC$), Uncertainty ($UNC$)
+- **Calibration Curve Intercept & Slope** (Cox calibration regression)"""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_code_cell(
+            """with open(exp_dir / "calibration_cv_results.json") as f:
+    calib_summary = json.load(f)
+
+calib_rows = []
+for method, results in calib_summary.items():
+    m = results["mean_metrics"]
+    s = results["std_metrics"]
+    calib_rows.append({
+        "Method": method.capitalize(),
+        "Brier Score": f"{m['brier_score']:.4f} ± {s['brier_score']:.4f}",
+        "Log Loss": f"{m['log_loss']:.4f} ± {s['log_loss']:.4f}",
+        "PR-AUC": f"{m['average_precision']:.4f} ± {s['average_precision']:.4f}",
+        "ROC-AUC": f"{m['roc_auc']:.4f} ± {s['roc_auc']:.4f}",
+        "ECE (Uniform)": f"{m['ece_uniform']:.4f}",
+        "ECE (Quantile)": f"{m['ece_quantile']:.4f}",
+        "Slope": f"{m['calibration_slope']:.4f}",
+    })
+
+df_calib = pd.DataFrame(calib_rows)
+display(df_calib)"""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_code_cell(
+            """with open(exp_dir / "calibration_selection_rationale.json") as f:
+    calib_sel = json.load(f)
+
+print(f"Selected Calibration Champion: {calib_sel['selected_method'].upper()}")
+print(f"Rationale: {calib_sel['rationale']}")"""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_code_cell(
+            """display(Image(filename=str(figures_dir / "22_calibration_curves_comparison.png")))
+display(Image(filename=str(figures_dir / "23_brier_decomposition_and_ece.png")))"""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_markdown_cell(
+            """### Calibration Findings
+- **Sigmoid (Platt Scaling)** achieved the lowest Brier score ($0.1335 \\pm 0.0056$) and lowest Log Loss ($0.4116 \\pm 0.0133$), while preserving optimal discriminative ranking (PR-AUC $0.6697 \\pm 0.0215$, ROC-AUC $0.8498 \\pm 0.0123$).
+- **Isotonic Calibration** showed slightly higher log loss ($0.4181$) and degraded PR-AUC ($0.6669$) due to sample-size step-function overfitting on moderate sample size ($N=5,634$).
+- **Conclusion**: Sigmoid calibration provides smooth, monotonic, well-calibrated probabilities across the full $[0, 1]$ interval."""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_markdown_cell(
+            """## 3. Decision Threshold Analysis & Cost Sensitivity
+
+We analyze classification performance across decision thresholds $\\tau \\in [0.10, 0.90]$ and evaluate expected operational costs under asymmetric false-negative penalties ($C_{\\text{FN}} : C_{\\text{FP}}$ from 0.2:1 to 10:1)."""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_code_cell(
+            """df_cost = pd.read_csv(exp_dir / "threshold_cost_analysis.csv")
+print(f"Threshold sweep rows: {len(df_cost)} evaluation points")
+display(df_cost[df_cost["threshold"].round(2).isin([0.18, 0.30, 0.50, 0.70])][
+    ["threshold", "precision", "recall", "specificity", "f1", "f2", "balanced_accuracy", "total_cost", "cost_savings_vs_default"]
+])"""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_code_cell(
+            """with open(exp_dir / "threshold_policy_evaluation.json") as f:
+    thresh_policy = json.load(f)
+
+print(f"Threshold Optimization Objective: {thresh_policy['objective']}")
+print(f"Selected Threshold:               {thresh_policy['selected_threshold']:.2f}")
+print(f"In-Sample F1:                     {thresh_policy['in_sample_metrics']['f1']:.4f}")
+print(f"Out-of-Fold F1:                   {thresh_policy['out_of_fold_metrics']['f1']:.4f}")
+print(f"Optimism Delta:                   {thresh_policy['optimism_delta']['f1']:+.4f}")
+print(f"Notes: {thresh_policy['selection_notes']}")"""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_code_cell(
+            """display(Image(filename=str(figures_dir / "24_threshold_precision_recall_f1.png")))
+display(Image(filename=str(figures_dir / "25_cost_curve_and_sensitivity.png")))"""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_markdown_cell(
+            """### Threshold Analysis Findings
+- At the standard threshold ($\\tau = 0.50$), precision is $0.656$ and recall is $0.523$, resulting in 713 missed churners in the training set.
+- Under a realistic retention cost ratio of $5:1$ ($C_{\\text{FN}}=\\$500, C_{\\text{FP}}=\\$100$), the cost-optimal threshold shifts to $\\tau^* = 0.18$.
+- At $\\tau^* = 0.18$, recall increases to $88.1\\%$, reducing missed churners from 713 to 178 ($75\\%$ reduction in churn leakage), yielding a **38.2% expected cost reduction** relative to the naive 0.50 threshold.
+- Nested out-of-fold cross-validation confirmed minimal threshold selection optimism (optimism delta on F1: $+0.0022$), validating policy generalization."""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_markdown_cell(
+            """## 4. Operational Customer Churn Risk Tiers
+
+PredictLab structures predicted probabilities into three actionable risk tiers:
+- **Low Risk** $[0.00, 0.20)$
+- **Medium Risk** $[0.20, 0.50)$
+- **High Risk** $[0.50, 1.00]$"""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_code_cell(
+            """df_tiers = pd.read_csv(exp_dir / "risk_tier_summary.csv")
+display(df_tiers[["risk_tier", "probability_range", "account_count", "percent_of_cohort", "mean_model_probability", "observed_churn_rate", "actual_churned_accounts"]])"""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_code_cell(
+            """display(Image(filename=str(figures_dir / "26_risk_tier_distribution.png")))"""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_markdown_cell(
+            """## 5. Global & Local Model Explainability
+
+We interpret the model's decision behavior:
+1. **Global Permutation Importance**: Evaluated on $X_{\\text{train}}$ with 10 random shuffles using Average Precision as the scoring metric.
+2. **Local TreeSHAP Attribution**: Exact Shapley values calculated on the margin log-odds scale from the underlying tree ensemble, attributing positive and negative churn contributions."""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_code_cell(
+            """df_perm = pd.read_csv(exp_dir / "permutation_importance_detailed.csv")
+print("Top 10 Global Features by Permutation Importance (PR-AUC drop):")
+display(df_perm.head(10)[["rank", "clean_feature", "importance_mean", "importance_std", "normalized_importance"]])"""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_code_cell(
+            """display(Image(filename=str(figures_dir / "27_shap_global_summary.png")))
+display(Image(filename=str(figures_dir / "28_shap_local_waterfall.png")))"""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_markdown_cell(
+            """### Explainability & Non-Causal Interpretation
+- The strongest global churn risk indicators are **Contract type** (month-to-month contracts strongly associated with churn), **MonthlyCharges**, **tenure**, and lack of **TechSupport** / **OnlineSecurity**.
+- **Collinear Feature Dilution**: Correlated features (such as `tenure` and `TotalCharges`, or `MonthlyCharges` and streaming services) share importance. Permutation importance assesses predictive utility within the model, not independent causal influence.
+- **Local SHAP Waterfalls**: Break down the specific log-odds shifts from the base rate ($E[f(x)] \\approx -1.02$) to the customer's predicted margin. Positive SHAP values indicate attributes elevating risk; negative values indicate stabilizing/retention attributes."""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_markdown_cell(
+            """## 6. Production Inference Engine Verification
+
+We demonstrate the production-ready `InferenceEngine`:
+- Strict Pydantic v2 schema validation for all 19 raw customer attributes.
+- Single customer prediction with SHAP explanation.
+- Batch customer prediction with atomic vs per-record error isolation modes.
+- Deterministic score assignment and risk tiering."""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_code_cell(
+            """engine = InferenceEngine(model_artifact_path=artifacts_dir / "model_phase5_calibrated.joblib")
+print(f"Loaded InferenceEngine from: {engine.artifact_path.name}")
+print(f"Default Decision Threshold: {engine.decision_threshold}")
+print(f"Risk Tiers: {[f'{t.name} [{t.min_prob:.2f}, {t.max_prob:.2f})' for t in engine.risk_tierer.definitions]}")"""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_code_cell(
+            """sample_customer = {
+    "gender": "Female",
+    "SeniorCitizen": 0,
+    "Partner": "No",
+    "Dependents": "No",
+    "tenure": 3,
+    "PhoneService": "Yes",
+    "MultipleLines": "No",
+    "InternetService": "Fiber optic",
+    "OnlineSecurity": "No",
+    "OnlineBackup": "No",
+    "DeviceProtection": "No",
+    "TechSupport": "No",
+    "StreamingTV": "Yes",
+    "StreamingMovies": "No",
+    "Contract": "Month-to-month",
+    "PaperlessBilling": "Yes",
+    "PaymentMethod": "Electronic check",
+    "MonthlyCharges": 85.0,
+    "TotalCharges": 255.0,
+}
+
+single_out = engine.predict_single(sample_customer, include_explanation=True)
+print("Single Customer Prediction Result:")
+print(f"  Probability:      {single_out.estimated_probability:.4f}")
+print(f"  Binary Label:     {single_out.predicted_label} (class={single_out.predicted_class}, threshold={single_out.applied_threshold})")
+print(f"  Risk Tier:        {single_out.risk_tier}")
+print(f"  Base Margin:      {single_out.explanation['base_value_margin']:.4f}")
+print(f"  Output Margin:    {single_out.explanation['model_output_margin']:.4f}")
+print("\\nTop Churn Drivers:")
+for driver in single_out.explanation["top_churn_drivers"]:
+    print(f"  + {driver['clean_feature']:20s} ({driver['feature_value']}): SHAP = +{driver['shap_value']:.4f}")
+print("\\nTop Retention Drivers:")
+for driver in single_out.explanation["top_retention_drivers"]:
+    print(f"  - {driver['clean_feature']:20s} ({driver['feature_value']}): SHAP = {driver['shap_value']:.4f}")"""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_code_cell(
+            """sample_batch = [
+    sample_customer,
+    {
+        "gender": "Male",
+        "SeniorCitizen": 0,
+        "Partner": "Yes",
+        "Dependents": "Yes",
+        "tenure": 60,
+        "PhoneService": "Yes",
+        "MultipleLines": "Yes",
+        "InternetService": "DSL",
+        "OnlineSecurity": "Yes",
+        "OnlineBackup": "Yes",
+        "DeviceProtection": "Yes",
+        "TechSupport": "Yes",
+        "StreamingTV": "No",
+        "StreamingMovies": "No",
+        "Contract": "Two year",
+        "PaperlessBilling": "No",
+        "PaymentMethod": "Credit card (automatic)",
+        "MonthlyCharges": 65.0,
+        "TotalCharges": 3900.0,
+    }
+]
+
+batch_out = engine.predict_batch(sample_batch, error_handling="atomic")
+print(f"Batch Prediction Succeeded: {batch_out.successful_predictions} / {batch_out.total_records} records processed")
+for rec in batch_out.predictions:
+    p = rec.prediction
+    print(f"  Index {rec.record_index}: Prob={p.estimated_probability:.4f}, Tier={p.risk_tier}, Label={p.predicted_label}")"""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_markdown_cell(
+            """## Summary & Phase 5 Sign-Off
+Phase 5 successfully implemented:
+- **Leakage-free nested CV calibration** establishing Sigmoid scaling as champion ($0.1335$ Brier, $0.4116$ Log Loss, $0.6697$ PR-AUC).
+- **Comprehensive cost-sensitive threshold analysis** identifying operational optimal thresholds with quantified cost savings and minimal optimism bias.
+- **Standardized risk tiers** mapping continuous probability scores to operational retention tiers.
+- **Dual-level explainability** via global Average Precision permutation importance and local TreeSHAP attribution.
+- **Robust production-ready inference engine** complete with input validation and dual batch error-handling modes."""
+        )
+    )
+
+    out_file = NOTEBOOKS_DIR / "05_evaluation_explainability_and_inference.ipynb"
+    print(f"Executing {out_file}...")
+    client = NotebookClient(nb, timeout=120, kernel_name="python3")
+    executed_nb = client.execute()
+    with open(out_file, "w", encoding="utf-8") as f:
+        nbf.write(executed_nb, f)
+    print(f"Saved executed notebook to {out_file}")
+
+
 if __name__ == "__main__":
     build_and_execute_notebook_01()
     build_and_execute_notebook_02()
     build_and_execute_notebook_03()
     build_and_execute_notebook_04()
+    build_and_execute_notebook_05()

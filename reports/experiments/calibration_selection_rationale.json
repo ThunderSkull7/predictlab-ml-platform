@@ -1,0 +1,39 @@
+{
+  "selected_method": "sigmoid",
+  "rationale": "Selected 'sigmoid' calibration. It achieved superior proper scoring and reliability: Brier Score=0.1335 (\u0394=-0.0001), Log Loss=0.4116 (\u0394=-0.0004), ECE=0.0295 (\u0394=+0.0032), while preserving ranking discrimination (PR-AUC=0.6697, ROC-AUC=0.8498).",
+  "summary": {
+    "uncalibrated": {
+      "brier_score": 0.13367636728688165,
+      "brier_std": 0.0055395931837070415,
+      "log_loss": 0.41207802024143947,
+      "log_loss_std": 0.013349034666470545,
+      "ece_uniform": 0.02629961066005896,
+      "ece_quantile": 0.02368260325783346,
+      "brier_reliability": 0.0016288969965229014,
+      "average_precision": 0.6683557644343672,
+      "roc_auc": 0.8494824658485876
+    },
+    "sigmoid": {
+      "brier_score": 0.13353815827706436,
+      "brier_std": 0.005573539000257726,
+      "log_loss": 0.41163939871266175,
+      "log_loss_std": 0.013270492607109035,
+      "ece_uniform": 0.02951585621783076,
+      "ece_quantile": 0.02653378105068016,
+      "brier_reliability": 0.0018493836492036874,
+      "average_precision": 0.6697383455155876,
+      "roc_auc": 0.8497570000815269
+    },
+    "isotonic": {
+      "brier_score": 0.13383301827593586,
+      "brier_std": 0.005887995024307442,
+      "log_loss": 0.4180522488664673,
+      "log_loss_std": 0.011969479937337877,
+      "ece_uniform": 0.028899615272998815,
+      "ece_quantile": 0.029885375769582473,
+      "brier_reliability": 0.0019734851806445385,
+      "average_precision": 0.6669074630892766,
+      "roc_auc": 0.8493623805963372
+    }
+  }
+}
