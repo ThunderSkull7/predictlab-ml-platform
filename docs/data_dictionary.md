@@ -94,4 +94,9 @@
 | `ChargesRatio` | `TotalCharges`, `tenure`, `MonthlyCharges` | `float64` | $[0.0, \infty) \cup \{\text{NaN}\}$ | Ratio of $\text{TotalCharges} / (\text{tenure} \times \text{MonthlyCharges})$. Evaluates historical vs. current billing rate consistency. When $\text{tenure} == 0$, the ratio is mathematically undefined ($0/0$) and is strictly represented as $\text{NaN}$ (never fabricated as 1.0 or epsilon). Missing values are subsequently processed by the fitted training imputer. | **Experimental Candidate** (Excluded from default baseline) |
 | `ChargesRatioDefined` | `tenure`, `MonthlyCharges` | `int64` | $\{0, 1\}$ | Deterministic binary indicator: $1$ if `ChargesRatio` is mathematically defined ($\text{tenure} > 0$ and $\text{MonthlyCharges} > 0$), $0$ if undefined ($\text{tenure} == 0$). Derived purely from predictors without target access. | **Experimental Candidate** (Excluded from default baseline) |
 
+### Summary of Pipeline Feature Spaces
+- **Default Baseline Preprocessors (Linear & Tree)**: **47 features** (4 numerical + 43 one-hot categorical). `OptionalServiceCount` is included as one of the 4 numerical features.
+- **Canonical Experimental Preprocessor**: **52 features** (47 baseline + 5 experimental additions: `TechnicalProtectionCount`, `StreamingEntertainmentCount`, `ChargesRatio`, `ChargesRatioDefined`, `AutomaticPayment`). `OptionalServiceCount` is never duplicated.
+
+
 

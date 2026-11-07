@@ -588,7 +588,7 @@ print(charges_ratio_defined.value_counts())"""
 We construct:
 1. Linear-model preprocessor (with `StandardScaler`).
 2. Tree-model preprocessor (preserving natural units without scaling).
-3. Experimental preprocessor (incorporating `ChargesRatio`, `ChargesRatioDefined`, and `AutomaticPayment`, with training-only median imputation of missing ratios).
+3. Experimental preprocessor (incorporating `ChargesRatio`, `ChargesRatioDefined`, `AutomaticPayment`, and service subtotals `TechnicalProtectionCount` and `StreamingEntertainmentCount`, with training-only median imputation of missing ratios).
 Transformers are fitted strictly on `X_train` and applied to `X_test`."""
         )
     )
@@ -607,8 +607,8 @@ tree_pipeline.fit(X_train)
 X_train_tree = transform_to_dataframe(tree_pipeline, X_train)
 X_test_tree = transform_to_dataframe(tree_pipeline, X_test)
 
-# 3. Experimental preprocessor
-exp_pipeline = create_experimental_preprocessor(include_charges_ratio=True, include_automatic_payment=True)
+# 3. Experimental preprocessor (canonical with all 5 experimental features enabled)
+exp_pipeline = create_experimental_preprocessor()
 exp_pipeline.fit(X_train)
 X_train_exp = transform_to_dataframe(exp_pipeline, X_train)
 X_test_exp = transform_to_dataframe(exp_pipeline, X_test)

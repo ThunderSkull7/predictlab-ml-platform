@@ -149,7 +149,19 @@ Both baseline preprocessor variants transform the 19 raw predictive features int
 | **Billing & Payment** | 6 | `cat__PaperlessBilling_No`, `cat__PaperlessBilling_Yes`, `cat__PaymentMethod_Bank transfer (automatic)`, `cat__PaymentMethod_Credit card (automatic)`, `cat__PaymentMethod_Electronic check`, `cat__PaymentMethod_Mailed check` |
 | **Total Features** | **47** | Complete feature space across all baseline estimators |
 
-- In the experimental pipeline (`create_experimental_preprocessor`), 5 additional features are generated (`num__ChargesRatio`, `num__ChargesRatioDefined`, `num__AutomaticPayment`, `num__TechnicalProtectionCount`, `num__StreamingEntertainmentCount`), yielding **52 features**.
+- In the experimental pipeline ([`create_experimental_preprocessor`](file:///d:/Project/Predictive%20Analytics%20Platform/src/predictlab/preprocessing/pipelines.py#L176)), exactly 5 additional features are generated over the 47 baseline features, yielding **52 features**:
+  1. `num__TechnicalProtectionCount` (subtotal across 4 technical services: OnlineSecurity, OnlineBackup, DeviceProtection, TechSupport)
+  2. `num__StreamingEntertainmentCount` (subtotal across 2 streaming services: StreamingTV, StreamingMovies)
+  3. `num__ChargesRatio` (TotalCharges / (tenure * MonthlyCharges), NaN at tenure == 0)
+  4. `num__ChargesRatioDefined` (binary indicator, 0 at tenure == 0, 1 at tenure > 0)
+  5. `num__AutomaticPayment` (binary indicator for bank transfer or credit card auto-pay)
+
+> [!NOTE]
+> **Phase 3.2 Feature Inventory Reconciliation**:
+> - `OptionalServiceCount` is an approved **baseline** numerical feature (feature #4) and is not counted as an experimental addition or duplicated.
+> - The experimental pipeline adds exactly 5 candidate features (9 numerical + 43 categorical = 52 dense features).
+> - Phrasing in the Phase 3.1 delivery report that mentioned `ServiceSubtotalCharges` and `ServiceChargesDifference` was a verbal hallucination in conversational summary text; no such features ever existed in the codebase.
+> - The partition manifest ([`data/splits/split_manifest.json`](file:///d:/Project/Predictive%20Analytics%20Platform/data/splits/split_manifest.json)) records purely train/test partition provenance and customer IDs, with zero pipeline-specific transformed feature counts.
 
 ---
 

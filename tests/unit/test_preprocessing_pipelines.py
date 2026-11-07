@@ -198,3 +198,90 @@ def test_experimental_preprocessor_zero_tenure_imputation_and_leakage(train_test
 
     _ = transform_to_dataframe(exp_pipeline, corrupted_test)
     np.testing.assert_array_equal(imputer.statistics_, list(imputer_stats.values()))
+
+
+def test_pipeline_feature_inventory_and_uniqueness(train_test_data: tuple) -> None:
+    """Audit and verify exact canonical feature inventories, uniqueness, and absence of duplication."""
+    X_train, _, _, _ = train_test_data
+
+    lin_pipeline = create_linear_preprocessor().fit(X_train)
+    tree_pipeline = create_tree_preprocessor().fit(X_train)
+    exp_pipeline = create_experimental_preprocessor().fit(X_train)
+
+    lin_names = get_preprocessor_feature_names(lin_pipeline)
+    tree_names = get_preprocessor_feature_names(tree_pipeline)
+    exp_names = get_preprocessor_feature_names(exp_pipeline)
+
+    # 1. Exact canonical dimensions
+    assert len(lin_names) == 47, f"Linear pipeline must produce 47 features, got {len(lin_names)}"
+    assert len(tree_names) == 47, f"Tree pipeline must produce 47 features, got {len(tree_names)}"
+    assert len(exp_names) == 52, f"Experimental pipeline must produce 52 features, got {len(exp_names)}"
+
+    # 2. Perfect name equality between linear and tree pipelines
+    assert lin_names == tree_names, "Linear and tree pipeline feature names must match identically"
+
+    # 3. 100% uniqueness (no duplicate feature names in any pipeline)
+    assert len(lin_names) == len(set(lin_names)), "Linear pipeline contains duplicate feature names"
+    assert len(tree_names) == len(set(tree_names)), "Tree pipeline contains duplicate feature names"
+    assert len(exp_names) == len(set(exp_names)), "Experimental pipeline contains duplicate feature names"
+
+    # 4. OptionalServiceCount appears exactly once in all pipelines (no duplication)
+    assert lin_names.count("num__OptionalServiceCount") == 1
+    assert tree_names.count("num__OptionalServiceCount") == 1
+    assert exp_names.count("num__OptionalServiceCount") == 1
+
+    # 5. Experimental candidate features are strictly absent from default baseline pipelines
+    expected_exp_additions = {
+        "num__TechnicalProtectionCount",
+        "num__StreamingEntertainmentCount",
+        "num__ChargesRatio",
+        "num__ChargesRatioDefined",
+        "num__AutomaticPayment",
+    }
+    for exp_feat in expected_exp_additions:
+        assert exp_feat not in lin_names, f"Experimental feature '{exp_feat}' leaked into linear baseline"
+        assert exp_feat not in tree_names, f"Experimental feature '{exp_feat}' leaked into tree baseline"
+
+    # 6. Experimental feature additions over baseline match expected set exactly
+    observed_exp_additions = set(exp_names) - set(lin_names)
+    assert observed_exp_additions == expected_exp_additions, (
+        f"Mismatched experimental additions: expected {expected_exp_additions}, got {observed_exp_additions}"
+    )
+
+    # 7. Undocumented features must NOT exist anywhere in transformed output
+    undocumented_candidates = ["ServiceSubtotalCharges", "ServiceChargesDifference"]
+    for undoc in undocumented_candidates:
+        assert not any(undoc in f for f in exp_names), f"Undocumented feature '{undoc}' found in pipeline output"
+
+
+def test_experimental_pipeline_ablation_dimensions(train_test_data: tuple) -> None:
+    """Verify that individual experimental feature toggles produce mathematically exact dimensions."""
+    X_train, _, _, _ = train_test_data
+
+    # Default: all experimental features enabled -> 52
+    exp_default = create_experimental_preprocessor().fit(X_train)
+    assert len(get_preprocessor_feature_names(exp_default)) == 52
+
+    # Ablate service subtotals -> 50
+    exp_no_subtotals = create_experimental_preprocessor(include_service_subtotals=False).fit(X_train)
+    assert len(get_preprocessor_feature_names(exp_no_subtotals)) == 50
+
+    # Ablate charges ratio -> 50 (removes ChargesRatio and ChargesRatioDefined)
+    exp_no_ratio = create_experimental_preprocessor(include_charges_ratio=False).fit(X_train)
+    assert len(get_preprocessor_feature_names(exp_no_ratio)) == 50
+
+    # Ablate automatic payment -> 51
+    exp_no_auto = create_experimental_preprocessor(include_automatic_payment=False).fit(X_train)
+    assert len(get_preprocessor_feature_names(exp_no_auto)) == 51
+
+    # Ablate all experimental features -> matches baseline 47
+    exp_none = create_experimental_preprocessor(
+        include_charges_ratio=False,
+        include_automatic_payment=False,
+        include_service_subtotals=False,
+    ).fit(X_train)
+    assert len(get_preprocessor_feature_names(exp_none)) == 47
+    assert get_preprocessor_feature_names(exp_none) == get_preprocessor_feature_names(
+        create_linear_preprocessor().fit(X_train)
+    )
+

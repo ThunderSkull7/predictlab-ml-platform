@@ -176,15 +176,17 @@ def create_tree_preprocessor(
 def create_experimental_preprocessor(
     include_charges_ratio: bool = True,
     include_automatic_payment: bool = True,
-    include_service_subtotals: bool = False,
+    include_service_subtotals: bool = True,
     scale_numeric: bool = True,
 ) -> Pipeline:
     """Factory function creating an experimental preprocessing pipeline for comparative evaluation.
 
     Allows isolated evaluation of experimental features:
-    - ChargesRatio (with explicit zero-tenure handling)
+    - ChargesRatio (with explicit zero-tenure handling) and ChargesRatioDefined indicator
     - AutomaticPayment binary indicator
     - TechnicalProtectionCount and StreamingEntertainmentCount subtotals
+
+    With all flags enabled (default), produces exactly 52 features (47 baseline + 5 experimental).
 
     Returns
     -------
