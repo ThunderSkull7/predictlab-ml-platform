@@ -1,5 +1,8 @@
 """Unit tests for probability calibration metrics, reliability curves, and cross-validation."""
 
+from pathlib import Path
+
+import joblib
 import numpy as np
 import pytest
 
@@ -105,3 +108,29 @@ def test_reliability_curve_and_distribution() -> None:
     assert "counts_retained" in dist
     assert "counts_churned" in dist
     assert sum(dist["counts_total"]) == 5
+
+
+def test_calibrated_artifact_ensemble_structure_and_metadata() -> None:
+    """Test that serialized Phase 5 calibrated artifact has 5-fold ensemble structure and complete metadata."""
+    artifact_path = Path("artifacts/model_phase5_calibrated.joblib")
+    if not artifact_path.exists():
+        pytest.skip("Phase 5 calibrated model artifact not found on disk.")
+
+    artifact = joblib.load(artifact_path)
+    assert isinstance(artifact, dict)
+    assert "pipeline" in artifact
+    assert "metadata" in artifact
+
+    calibrated_pipeline = artifact["pipeline"]
+    assert hasattr(calibrated_pipeline, "calibrated_classifiers_")
+    assert len(calibrated_pipeline.calibrated_classifiers_) == 5
+    np.testing.assert_array_equal(calibrated_pipeline.classes_, np.array([0, 1]))
+
+    metadata = artifact["metadata"]
+    assert metadata["calibration_method"] == "sigmoid"
+    assert metadata["ensemble_size"] == 5
+    assert "calibrated_classifier_cv_semantics" in metadata
+    assert "cost_model_primary" in metadata
+    cost_meta = metadata["cost_model_primary"]
+    assert "TotalCost = C_FP*FP + C_FN*FN + C_TP*TP + C_TN*TN" in cost_meta["formula"]
+

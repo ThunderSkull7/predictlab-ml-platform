@@ -19,7 +19,9 @@ from predictlab.calibration.selection import (
 )
 from predictlab.config import get_settings
 from predictlab.data.load import load_raw_dataset
-from predictlab.explainability.global_importance import compute_training_permutation_importance
+from predictlab.explainability.global_importance import (
+    compute_cross_validated_permutation_importance,
+)
 from predictlab.explainability.local_attribution import TreeShapExplainer
 from predictlab.inference.engine import InferenceEngine
 from predictlab.logging_config import get_logger
@@ -212,15 +214,39 @@ def main() -> None:
     df_thresh.to_csv(exp_dir / "threshold_evaluation_grid.csv", index=False)
 
     # Cost Matrix and Sensitivity Analysis
-    base_cost_matrix = CostMatrix(cost_fp=1.0, cost_fn=5.0)  # 5:1 loss ratio
+    # Primary scenario: Comprehensive Incentive Model (C_FP=100, C_FN=500, C_TP=100, C_TN=0)
+    base_cost_matrix = CostMatrix.comprehensive_incentive(
+        cost_fp=100.0, cost_fn=500.0, cost_tp=100.0, cost_tn=0.0
+    )
     df_thresh_cost = evaluate_cost_sensitive_thresholds(df_thresh, base_cost_matrix)
     df_thresh_cost.to_csv(exp_dir / "threshold_cost_analysis.csv", index=False)
 
-    df_cost_sensitivity = run_cost_ratio_sensitivity(df_thresh)
+    # Secondary scenario: Misclassification Penalty Only (C_FP=100, C_FN=500, C_TP=0, C_TN=0)
+    misclass_cost_matrix = CostMatrix.misclassification_penalty_only(cost_fp=100.0, cost_fn=500.0)
+    df_thresh_misclass = evaluate_cost_sensitive_thresholds(df_thresh, misclass_cost_matrix)
+    df_thresh_misclass.to_csv(exp_dir / "threshold_cost_analysis_misclass_only.csv", index=False)
+
+    df_cost_sensitivity = run_cost_ratio_sensitivity(
+        df_thresh,
+        cost_fp=100.0,
+        cost_tp=100.0,
+        cost_tn=0.0,
+        scenario_label="comprehensive_incentive",
+    )
     df_cost_sensitivity.to_csv(exp_dir / "cost_ratio_sensitivity.csv", index=False)
-    print("  Cost Ratio Sensitivity Analysis across hypothetical ratios (CFN : CFP):")
+
+    df_cost_sensitivity_misclass = run_cost_ratio_sensitivity(
+        df_thresh,
+        cost_fp=100.0,
+        cost_tp=0.0,
+        cost_tn=0.0,
+        scenario_label="misclassification_penalty_only",
+    )
+    df_cost_sensitivity_misclass.to_csv(exp_dir / "cost_ratio_sensitivity_misclass_only.csv", index=False)
+
+    print("  Cost Ratio Sensitivity Analysis (Comprehensive Incentive C_TP=100, C_FP=100):")
     for _, row in df_cost_sensitivity.iterrows():
-        print(f"    Ratio {row['cost_ratio_fn_to_fp']:>6s} -> Optimal Threshold: {row['optimal_threshold']:.2f} | Recall: {row['recall_at_optimal']:.2f} | Savings vs tau=0.5: {row['savings_pct_vs_default']:.1f}%")
+        print(f"    Ratio {row['cost_ratio_fn_to_fp']:>6s} -> Optimal Threshold: {row['optimal_threshold']:.2f} | Recall: {row['recall_at_optimal']:.2f} | Savings vs tau=0.5: {row['savings_pct_vs_default']:.1f}% (${row['cost_savings_dollars']:,.0f})")
 
     # Nested Threshold Policy Evaluation
     policy_res = evaluate_threshold_policy_nested(
@@ -260,22 +286,39 @@ def main() -> None:
     print("  Generating Figure 25: Expected Cost Curve & Sensitivity...")
     fig, (ax_cost, ax_sens) = plt.subplots(1, 2, figsize=(14, 5))
 
-    ax_cost.plot(df_thresh_cost["threshold"], df_thresh_cost["cost_per_customer"], color="#c9302c", linewidth=2.2, label="Cost per Customer (CFN=5, CFP=1)")
+    ax_cost.plot(
+        df_thresh_cost["threshold"],
+        df_thresh_cost["total_cost"] / 1000.0,
+        color="#c9302c",
+        linewidth=2.2,
+        label="Comprehensive Incentive ($k)\n(C_FP=100, C_FN=500, C_TP=100)",
+    )
+    ax_cost.plot(
+        df_thresh_misclass["threshold"],
+        df_thresh_misclass["total_cost"] / 1000.0,
+        color="#3b6998",
+        linewidth=1.8,
+        linestyle="--",
+        label="Misclass Penalty Only ($k)\n(C_FP=100, C_FN=500, C_TP=0)",
+    )
     ax_cost.axvline(x=0.50, color="#666666", linestyle="--", linewidth=1.2, label="Default (0.50)")
     ax_cost.axvline(x=opt_t, color="#2ca02c", linestyle="-.", linewidth=1.5, label=f"Cost-Minimizing (τ* = {opt_t:.2f})")
     ax_cost.set_xlabel("Decision Threshold (τ)", fontsize=11, fontweight="bold")
-    ax_cost.set_ylabel("Expected Cost per Customer (Normalized)", fontsize=11, fontweight="bold")
-    ax_cost.set_title("Expected Cost Curve (Asymmetric 5:1 Loss Ratio)", fontsize=12, fontweight="bold")
-    ax_cost.legend(loc="upper right", frameon=True)
+    ax_cost.set_ylabel("Total Operational Cost ($ in Thousands)", fontsize=11, fontweight="bold")
+    ax_cost.set_title("Hypothetical Cost Curves (5:1 Loss Ratio)", fontsize=12, fontweight="bold")
+    ax_cost.legend(loc="upper right", frameon=True, fontsize=9)
 
-    ratios = [0.2, 0.5, 1.0, 2.0, 3.0, 5.0, 10.0]
+    ratios = [0.2, 0.5, 1.0, 2.0, 3.0, 5.0, 8.0, 10.0]
     opt_thresholds = df_cost_sensitivity["optimal_threshold"].tolist()
-    ax_sens.plot(ratios, opt_thresholds, marker="s", markersize=7, linewidth=2.0, color="#3b6998")
-    ax_sens.set_xlabel("Hypothetical Cost Ratio (Cost FN / Cost FP)", fontsize=11, fontweight="bold")
+    ax_sens.plot(ratios, opt_thresholds, marker="s", markersize=7, linewidth=2.0, color="#3b6998", label="Comprehensive Incentive")
+    opt_th_misclass = df_cost_sensitivity_misclass["optimal_threshold"].tolist()
+    ax_sens.plot(ratios, opt_th_misclass, marker="o", markersize=6, linewidth=1.8, linestyle="--", color="#f0ad4e", label="Misclassification Only")
+    ax_sens.set_xlabel("Hypothetical Cost Ratio (C_FN / C_FP)", fontsize=11, fontweight="bold")
     ax_sens.set_ylabel("Optimal Decision Threshold (τ*)", fontsize=11, fontweight="bold")
-    ax_sens.set_title("Threshold Sensitivity across Cost Ratios", fontsize=12, fontweight="bold")
+    ax_sens.set_title("Threshold Sensitivity across Hypothetical Ratios", fontsize=12, fontweight="bold")
+    ax_sens.legend(loc="upper right", frameon=True, fontsize=9)
     for r, th in zip(ratios, opt_thresholds, strict=True):
-        ax_sens.annotate(f"{th:.2f}", (r, th), textcoords="offset points", xytext=(0, 8), ha="center", fontsize=9, fontweight="bold")
+        ax_sens.annotate(f"{th:.2f}", (r, th), textcoords="offset points", xytext=(0, 7), ha="center", fontsize=8, fontweight="bold")
 
     plt.tight_layout()
     fig.savefig(fig_dir / "25_cost_curve_and_sensitivity.png", dpi=300)
@@ -315,13 +358,14 @@ def main() -> None:
     plt.close(fig)
 
     # 6. Global & Local Explainability
-    print("\n[Step 6/8] Evaluating global permutation importance and local TreeSHAP explanations...")
-    perm_res, df_perm = compute_training_permutation_importance(
-        pipeline=base_pipeline.fit(X_train, y_train_arr),
+    print("\n[Step 6/8] Evaluating cross-validated permutation importance and local TreeSHAP explanations...")
+    perm_res, df_perm = compute_cross_validated_permutation_importance(
+        pipeline=base_pipeline,
         X_train=X_train,
         y_train=y_train_arr,
         scoring="average_precision",
-        n_repeats=10,
+        n_splits=5,
+        n_repeats=5,
         random_state=settings.random_state,
     )
     df_perm.to_csv(exp_dir / "permutation_importance_detailed.csv", index=False)
@@ -340,10 +384,20 @@ def main() -> None:
     # Initialize SHAP explainer on final calibrated model
     explainer = TreeShapExplainer(final_calibrated_pipeline, feature_names=perm_res.feature_names)
 
-    # Plot SHAP Global Feature Importance
-    print("  Generating Figure 27: SHAP Global Feature Importance Summary...")
+    # Plot Cross-Validated Global Feature Importance
+    print("  Generating Figure 27: Cross-Validated Permutation Importance Summary...")
     fig, ax = plt.subplots(figsize=(10, 8))
     top15 = df_perm.iloc[:15]
+    y_pos = np.arange(len(top15))
+    ax.barh(y_pos, top15["importance_mean"], xerr=top15["importance_std"], align="center", color="#3b6998", alpha=0.85, capsize=4)
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(top15["clean_feature"], fontsize=10)
+    ax.invert_yaxis()
+    ax.set_xlabel("Cross-Validated Permutation Importance: Mean Δ PR-AUC (± Std across Folds)", fontsize=11, fontweight="bold")
+    ax.set_title("Top 15 Predictive Features (5-Fold Cross-Validated on Training Partition)", fontsize=12, fontweight="bold")
+    plt.tight_layout()
+    fig.savefig(fig_dir / "27_shap_global_summary.png", dpi=300)
+    plt.close(fig)
     y_pos = np.arange(len(top15))
     ax.barh(y_pos, top15["importance_mean"], xerr=top15["importance_std"], align="center", color="#3b6998", alpha=0.85, capsize=4)
     ax.set_yticks(y_pos)
@@ -412,10 +466,27 @@ def main() -> None:
         "feature_count": 47,
         "feature_names": perm_res.feature_names,
         "calibration_method": selected_calib_method,
-        "calibration_cv_config": "Nested 5-fold outer StratifiedKFold x 5-fold inner CalibratedClassifierCV",
+        "ensemble_size": len(final_calibrated_pipeline.calibrated_classifiers_),
+        "calibrated_classifier_cv_semantics": (
+            "Final artifact is a 5-fold ensemble of base pipelines (each trained on 80% inner fold) "
+            "with 5 Sigmoid (Platt) calibrators fitted on 20% validation splits; inference averages "
+            "the 5 calibrated probability outputs."
+        ),
+        "calibration_cv_config": (
+            "Nested 5-fold outer StratifiedKFold x 5-fold inner CalibratedClassifierCV. "
+            "Final artifact is a 5-fold ensemble of base pipelines (each trained on 80% inner fold) "
+            "with 5 Sigmoid (Platt) calibrators fitted on 20% validation splits; inference averages "
+            "the 5 calibrated probability outputs."
+        ),
         "calibration_metrics": calib_results[selected_calib_method][0].mean_metrics,
         "decision_threshold": opt_t,
         "default_threshold": 0.50,
+        "cost_model_primary": {
+            "scenario": "comprehensive_incentive",
+            "formula": "TotalCost = C_FP*FP + C_FN*FN + C_TP*TP + C_TN*TN",
+            "parameters": {"C_FP": 100.0, "C_FN": 500.0, "C_TP": 100.0, "C_TN": 0.0},
+            "note": "Hypothetical scenario parameters; not empirical accounting facts.",
+        },
         "risk_tier_boundaries": [t.model_dump() for t in risk_tierer.definitions],
         "training_and_validation_methodology": (
             "Outer Stratified 5-Fold Cross-Validation on training partition only. "

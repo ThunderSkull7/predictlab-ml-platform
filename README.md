@@ -232,19 +232,19 @@ PredictLab is developed following a rigorous 7-phase engineering plan:
   - Serialized model bundle artifact (`artifacts/model.joblib`) with comprehensive provenance metadata.
   - Clean execution of `notebooks/04_model_training_and_comparison.ipynb` and comprehensive `reports/model_comparison_report.md`.
   - 92 passing automated unit and integration tests (100% pass rate) and clean Ruff static analysis.
-- [x] **Phase 5: Probability Calibration, Threshold Tuning, Explainability & Production Inference**
+- [x] **Phase 5: Probability Calibration, Threshold Tuning, Explainability & Production Inference (Audited in Phase 5.1)**
   - Modular packages `predictlab.calibration`, `predictlab.thresholding`, `predictlab.explainability`, and `predictlab.inference`.
   - Leakage-free 5x5 nested cross-validation evaluating Uncalibrated, Sigmoid (Platt), and Isotonic calibration across proper scoring rules (Brier score, Log Loss), ECE (uniform and quantile binning), Murphy (1973) Brier score decomposition, and Cox calibration regression.
-  - Selected Sigmoid calibration as champion: Brier Score **0.1335 ± 0.0056**, Log Loss **0.4116 ± 0.0133**, PR-AUC **0.6697 ± 0.0215**, ROC-AUC **0.8498 ± 0.0123**, Quantile ECE **0.0265**.
-  - Systematic threshold grid sweep (81 points, 0.10 to 0.90) and financial cost matrix modeling. At a 5:1 loss ratio ($C_{\text{FN}} = \$500, C_{\text{FP}} = \$100$), cost-optimal threshold shifts to $\tau^* = 0.18$, boosting recall from $52.3\%$ to $88.1\%$, cutting missed churners from 713 to 178 ($75\%$ reduction in churn leakage), and saving $38.2\%$ in expected operational cost.
-  - Nested CV policy evaluation confirming minimal threshold selection optimism (optimism delta on F1: $+0.0022$).
-  - Contiguous customer risk tiers: Low ($[0.0, 0.20)$), Medium ($[0.20, 0.50)$), High ($[0.50, 1.00]$).
-  - Global permutation importance on $X_{\text{train}}$ with 10 repeats, highlighting Contract type, tenure, MonthlyCharges, and TechSupport, while accounting for collinear feature dilution.
-  - Local TreeSHAP attribution via `TreeShapExplainer` on model margin log-odds scale with top churn/retention drivers and non-causal interpretation warnings.
-  - Production-ready `InferenceEngine` supporting strict 19-predictor Pydantic v2 validation (`CustomerInputRecord`), zero-tenure `TotalCharges` whitespace handling, customerID stripping, atomic and per-record batch error handling modes, and deterministic scoring.
+  - Selected Sigmoid calibration as champion: Brier Score **0.1335 ± 0.0056**, Log Loss **0.4116 ± 0.0133**, PR-AUC **0.6697 ± 0.0215**, ROC-AUC **0.8498 ± 0.0123**, Quantile ECE **0.0265**. Production artifact is a 5-fold ensemble averaging calibrated probability outputs.
+  - Systematic threshold grid sweep (81 points, 0.10 to 0.90) and financial cost modeling. Reconciled 4-term Comprehensive Incentive Model ($C_{\text{TP}}=\$100, C_{\text{FP}}=\$100, C_{\text{FN}}=\$500, C_{\text{TN}}=\$0$), achieving cost-optimal $\tau^* = 0.19$, cutting undetected churn by $72.7\%$, and saving **$20.75\%$ ($\$96,900$)** vs default $\tau=0.50$. Reconciled 2-term Misclassification-Only Model ($\tau^*=0.18$, saving **$38.20\%$ ($\$147,900$)**).
+  - Nested CV policy evaluation confirming empirical policy stability across folds (mean fold threshold $\tau = 0.1980 \pm 0.0098$, out-of-fold F1 = $0.6159$, optimism delta = $-0.0012$).
+  - Contiguous customer risk tiers: Low ($[0.0, 0.20)$), Medium ($[0.20, 0.50)$), High ($[0.50, 1.00]$), functionally decoupled from the binary classification threshold.
+  - Cross-validated permutation importance evaluated on held-out validation folds across 5 splits with 5 repeats, highlighting Contract type, tenure, Fiber optic internet, TotalCharges, MonthlyCharges, and OnlineSecurity, while accounting for collinear feature dilution.
+  - Multi-estimator local TreeSHAP attribution aggregated across all 5 ensemble tree estimators on the ensemble decision margin log-odds scale ($\bar{E}[f(x)] \approx -1.5438$), verifying exact additivity with non-causal interpretation guidelines.
+  - Production-ready `InferenceEngine` supporting strict 19-predictor Pydantic v2 validation (`CustomerInputRecord`), zero-tenure `TotalCharges` whitespace handling, customerID stripping, atomic and per-record batch error handling modes, deterministic scoring, and verified sub-millisecond vectorized batch latency ($0.121$ ms/record).
   - Serialized production artifact `artifacts/model_phase5_calibrated.joblib`; preserved approved Phase 4 model at `artifacts/model_phase4.joblib`.
   - Four dedicated Phase 5 markdown reports and executed `notebooks/05_evaluation_explainability_and_inference.ipynb`.
-  - 121 passing automated unit and integration tests (100% pass rate) and clean Ruff static analysis.
+  - 126 passing automated unit and integration tests (100% pass rate) and clean Ruff static analysis.
 - [ ] **Phase 6: Interactive Dashboard & Explainable Inference UI**
 - [ ] **Phase 7: Packaging, Verification & Production Readiness**
 

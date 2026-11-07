@@ -76,3 +76,29 @@ def test_risk_tier_statistical_summary() -> None:
     high_row = df[df["risk_tier"] == "High"].iloc[0]
     assert high_row["account_count"] == 2
     assert high_row["observed_churn_rate"] == 1.0
+
+
+def test_risk_tier_boundary_semantics_and_threshold_decoupling() -> None:
+    """Test explicit boundary conditions and decoupling of risk tiers from binary thresholds.
+
+    Risk tiers partition probability space into operational cohorts:
+      - Low: [0.00, 0.20)
+      - Medium: [0.20, 0.50)
+      - High: [0.50, 1.00]
+    Binary decision thresholds (e.g. tau=0.18 or 0.19) are cost-driven policy cutoffs
+    and are conceptually decoupled from the 3-tier risk governance structure.
+    """
+    tierer = RiskTierer()
+
+    # Exact boundary checks
+    assert tierer.assign_tier(0.00) == "Low"
+    assert tierer.assign_tier(0.1999999) == "Low"
+    assert tierer.assign_tier(0.20) == "Medium"
+    assert tierer.assign_tier(0.4999999) == "Medium"
+    assert tierer.assign_tier(0.50) == "High"
+    assert tierer.assign_tier(1.00) == "High"
+
+    # Decoupling check: cost-optimal threshold 0.18/0.19 resides in the Low tier
+    cost_threshold = 0.19
+    assert tierer.assign_tier(cost_threshold) == "Low"
+

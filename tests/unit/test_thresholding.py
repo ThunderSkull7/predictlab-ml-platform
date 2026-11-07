@@ -36,13 +36,36 @@ def test_threshold_grid_generation() -> None:
 
 
 def test_cost_matrix_calculation() -> None:
-    """Test CostMatrix calculation with custom asymmetric costs."""
-    cm = CostMatrix(cost_fp=2.0, cost_fn=10.0, benefit_tp=5.0)
+    """Test CostMatrix calculation with complete 4-term cost formula."""
+    cm = CostMatrix(cost_fp=100.0, cost_fn=500.0, cost_tp=100.0, cost_tn=0.0)
 
     # 10 TP, 5 FP, 20 TN, 2 FN
-    # Cost = (5 * 2.0) + (2 * 10.0) - (10 * 5.0) = 10 + 20 - 50 = -20.0
+    # TotalCost = C_FP*FP + C_FN*FN + C_TP*TP + C_TN*TN
+    #           = 100*5 + 500*2 + 100*10 + 0*20 = 500 + 1000 + 1000 = 2500.0
     cost = cm.compute_total_cost(tp=10, fp=5, tn=20, fn=2)
-    assert cost == -20.0
+    assert cost == 2500.0
+
+    # Test misclassification only scenario constructor
+    cm_err = CostMatrix.misclassification_penalty_only(cost_fp=100.0, cost_fn=500.0)
+    assert cm_err.cost_tp == 0.0
+    assert cm_err.cost_tn == 0.0
+    assert cm_err.compute_total_cost(tp=10, fp=5, tn=20, fn=2) == 1500.0
+
+
+def test_confusion_matrix_arithmetic_and_sample_conservation() -> None:
+    """Verify threshold evaluation grid preserves exact sample count across all thresholds."""
+    y_true = np.array([0, 0, 0, 0, 1, 1, 1, 1])
+    y_prob = np.array([0.15, 0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85])
+    thresholds = np.linspace(0.10, 0.90, 81)
+
+    df = evaluate_threshold_grid(y_true, y_prob, thresholds=thresholds)
+    assert len(df) == 81
+    assert np.isclose(df["threshold"].iloc[0], 0.10)
+    assert np.isclose(df["threshold"].iloc[-1], 0.90)
+
+    for _, row in df.iterrows():
+        total_n = row["true_positives"] + row["false_positives"] + row["true_negatives"] + row["false_negatives"]
+        assert total_n == len(y_true)
 
 
 def test_cost_sensitive_threshold_evaluation() -> None:
@@ -105,3 +128,6 @@ def test_nested_threshold_policy_evaluation() -> None:
     assert "f1" in res.in_sample_metrics
     assert "f1" in res.out_of_fold_metrics
     assert "f1" in res.optimism_delta
+    assert len(res.fold_details) == 2
+    assert "std_fold_threshold" in res.out_of_fold_metrics
+    assert "mean_fold_threshold" in res.out_of_fold_metrics

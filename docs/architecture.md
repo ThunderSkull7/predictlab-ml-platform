@@ -100,8 +100,8 @@ predictlab-ml-platform/
 │   │   └── risk_tiers.py       # Contiguous 3-tier risk partitioner & cohort profiler
 │   ├── explainability/         # Global & local model interpretation (Phase 5)
 │   │   ├── __init__.py
-│   │   ├── global_importance.py # Training-only permutation importance with Average Precision
-│   │   └── local_attribution.py # TreeSHAP local attribution on model margin log-odds scale
+│   │   ├── global_importance.py # 5-fold cross-validated permutation importance with Average Precision
+│   │   └── local_attribution.py # Multi-estimator TreeSHAP local attribution on ensemble margin log-odds scale
 │   └── inference/              # Production-grade single & batch inference engine (Phase 5)
 │       ├── __init__.py
 │       ├── schemas.py          # Pydantic v2 input/output schemas & predictor validation
@@ -164,21 +164,21 @@ predictlab-ml-platform/
 - **Proper Scoring Rules & Metrics (`metrics.py`)**: Calculates Brier score, Log Loss, uniform and quantile Expected Calibration Error (ECE), Murphy (1973) Brier score decomposition (Reliability, Resolution, Uncertainty), and Cox calibration regression (intercept and slope).
 - **Reliability Curves (`curves.py`)**: Produces empirical reliability curve coordinates and probability distribution histograms.
 - **Nested Cross-Validation (`cross_validation.py`)**: Executes leakage-free 5x5 nested CV comparing uncalibrated, Sigmoid (Platt), and Isotonic calibration without data reuse.
-- **Calibration Champion Selection (`selection.py`)**: Automates objective multi-criteria calibration selection and refits winning `CalibratedClassifierCV` pipelines on the full training dataset.
+- **Calibration Champion Selection (`selection.py`)**: Automates objective multi-criteria calibration selection and fits production 5-fold ensemble `CalibratedClassifierCV` pipelines on the training dataset.
 
 ### H. Decision Thresholding & Cost Optimization (`predictlab.thresholding`)
 - **Systematic Threshold Sweeps (`metrics.py`)**: Evaluates 81 discrete thresholds ($\tau \in [0.10, 0.90]$) across Precision, Recall, Specificity, F1, F2, F0.5, Balanced Accuracy, and confusion counts.
-- **Cost-Sensitive Decision Modeling (`costs.py`)**: Implements configurable `CostMatrix` structures, calculating total operational risk cost, cost-per-customer, and cost sensitivity across asymmetric loss ratios ($C_{\text{FN}} : C_{\text{FP}}$ from 0.2:1 to 10:1).
-- **Policy Optimism Audit (`optimization.py`)**: Executes nested CV policy evaluation (`evaluate_threshold_policy_nested`) to quantify threshold selection optimism bias.
-- **Operational Customer Risk Tiers (`risk_tiers.py`)**: Enforces contiguous probability partitioning across Low ($[0.0, 0.20)$), Medium ($[0.20, 0.50)$), and High ($[0.50, 1.00]$) tiers with statistical cohort profiling.
+- **Cost-Sensitive Decision Modeling (`costs.py`)**: Implements configurable `CostMatrix` structures using the 4-term expected cost formula ($\text{TotalCost} = C_{\text{FP}}\text{FP} + C_{\text{FN}}\text{FN} + C_{\text{TP}}\text{TP} + C_{\text{TN}}\text{TN}$), calculating total operational risk cost, cost-per-customer, and cost sensitivity across asymmetric loss ratios ($C_{\text{FN}} : C_{\text{FP}}$ from 0.2:1 to 10:1).
+- **Policy Optimism Audit (`optimization.py`)**: Executes nested CV policy evaluation (`evaluate_threshold_policy_nested`) to quantify empirical threshold policy stability across splits.
+- **Operational Customer Risk Tiers (`risk_tiers.py`)**: Enforces contiguous probability partitioning across Low ($[0.0, 0.20)$), Medium ($[0.20, 0.50)$), and High ($[0.50, 1.00]$) tiers with statistical cohort profiling, decoupled from binary decision cutoffs.
 
 ### I. Global & Local Explainability (`predictlab.explainability`)
-- **Global Permutation Importance (`global_importance.py`)**: Measures Average Precision drop across features on $X_{\text{train}}$ with 10 shuffle repeats, accounting for collinear feature dilution.
-- **Local TreeSHAP Attributions (`local_attribution.py`)**: Computes exact additive Shapley values on the model margin log-odds scale using `TreeShapExplainer`, identifying positive (churn-elevating) and negative (retention-stabilizing) feature drivers with explicit non-causal interpretation warnings.
+- **Global Permutation Importance (`global_importance.py`)**: Measures Average Precision drop across features via 5-fold cross-validation strictly on held-out validation splits with 5 shuffle repeats, accounting for collinear feature dilution.
+- **Local TreeSHAP Attributions (`local_attribution.py`)**: Computes exact additive Shapley values aggregated across all 5 ensemble tree estimators on the ensemble margin log-odds scale using `TreeShapExplainer`, identifying positive (churn-elevating) and negative (retention-stabilizing) feature drivers with explicit non-causal interpretation warnings.
 
 ### J. Production-Ready Inference Engine (`predictlab.inference`)
 - **Strict Pydantic v2 Schemas (`schemas.py`)**: Validates the 19 raw customer predictors, handles zero-tenure `TotalCharges` whitespace strings safely, strips `customerID`, and returns structured single/batch prediction records.
-- **Unified Inference Engine (`engine.py`)**: Supports single-record scoring, high-throughput batch scoring, dual error-handling modes (`atomic` transactional validation vs `per_record` resilient isolation), configurable threshold overrides, risk tiering, and optional local TreeSHAP explanations.
+- **Unified Inference Engine (`engine.py`)**: Supports single-record scoring, high-throughput batch scoring, dual error-handling modes (`atomic` transactional validation vs `per_record` resilient isolation), configurable threshold overrides, risk tiering, reproducible latency benchmarks, and optional local TreeSHAP explanations.
 
 ---
 
@@ -187,9 +187,9 @@ predictlab-ml-platform/
 To avoid methodological ambiguity, PredictLab enforces precise distinctions across model outputs:
 
 1. **Model-Estimated Class Probabilities (Uncalibrated)**: Raw classifier outputs (e.g. tree fraction scores). Lower log loss reflects superior proper scoring rather than empirical calibration.
-2. **Empirically Calibrated Probabilities (Phase 5)**: Post-processed probabilities validated against true empirical event frequencies using Sigmoid (Platt) scaling, verified via Brier score ($0.1335$), Log Loss ($0.4116$), and reliability diagrams.
-3. **Binary Decisions (Phase 5)**: Derived by applying an explicit, cost-optimized threshold ($\tau^* = 0.18$), saving $38.2\%$ in operational retention cost over naive $0.50$ demarcation.
-4. **Business Risk Tiers (Phase 5)**: Standardized contiguous segments (Low $[0.0, 0.20)$, Medium $[0.20, 0.50)$, High $[0.50, 1.00]$) mapping continuous probabilities to tiered operational intervention workflows.
+2. **Empirically Calibrated Probabilities (Phase 5)**: Post-processed probabilities validated against true empirical event frequencies using Sigmoid (Platt) scaling, verified via Brier score ($0.1335$), Log Loss ($0.4116$), and reliability diagrams. Evaluated via a 5-fold bagging ensemble.
+3. **Binary Decisions (Phase 5)**: Derived by applying an explicit, cost-optimized threshold ($\tau^* = 0.19$ saving $20.75\%$ in comprehensive retention incentive costs, or $\tau^* = 0.18$ saving $38.20\%$ in misclassification error penalties over naive $0.50$ demarcation).
+4. **Business Risk Tiers (Phase 5)**: Standardized contiguous segments (Low $[0.0, 0.20)$, Medium $[0.20, 0.50)$, High $[0.50, 1.00]$) mapping continuous probabilities to tiered operational intervention workflows, conceptually decoupled from binary decision thresholds.
 
 ---
 

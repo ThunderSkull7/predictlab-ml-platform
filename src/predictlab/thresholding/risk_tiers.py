@@ -20,11 +20,17 @@ class RiskTierer:
     """Assigns subscriber probability scores into risk tiers for operational prioritization.
 
     Methodological & Governance Warnings:
-    1. Risk ranking is distinct from binary classification thresholding.
-    2. Boundaries defined here represent provisional, configurable operational buckets. They must not
-       be presented as universally validated commercial retention policies.
-    3. A risk score does NOT predict future churn with longitudinal temporal certainty; it ranks accounts
-       by statistical resemblance to churned subscribers in the cross-sectional dataset.
+    1. Operational Decoupling: Risk ranking tiers (e.g. Low [0.0, 0.20), Medium [0.20, 0.50), High [0.50, 1.00])
+       are completely separate and decoupled from the binary classification decision threshold (e.g. tau* = 0.18 or 0.19).
+       A binary threshold determines discrete operational action (e.g. approve vs decline concession), whereas
+       risk tiers group subscribers into broad workflow queues for relationship management.
+    2. Provisional & Configurable: Boundaries defined here represent provisional, illustrative buckets.
+       They must NOT be characterized as universally validated commercial retention policies.
+    3. Retrospective Cohort Statistics: Observed cohort churn rates (e.g. 7.1% Low, 32.7% Medium, 67.3% High)
+       are historical descriptive summaries of the observational dataset, NOT future event probabilities or
+       performance guarantees for individual customers.
+    4. Non-Causal Guidance: Suggested interventions are illustrative operational examples, NOT clinically
+       or experimentally validated causal remedies.
     """
 
     def __init__(

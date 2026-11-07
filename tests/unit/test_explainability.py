@@ -3,7 +3,10 @@
 import numpy as np
 
 from predictlab.data.load import load_raw_dataset
-from predictlab.explainability.global_importance import compute_training_permutation_importance
+from predictlab.explainability.global_importance import (
+    compute_cross_validated_permutation_importance,
+    compute_training_permutation_importance,
+)
 from predictlab.explainability.local_attribution import TreeShapExplainer
 from predictlab.models.estimators import create_hist_gradient_boosting_pipeline
 from predictlab.preprocessing.split import split_dataset
@@ -79,3 +82,53 @@ def test_consistent_explanations_for_repeated_inputs() -> None:
     assert [a.shap_value for a in expl_1.all_attributions] == [
         a.shap_value for a in expl_2.all_attributions
     ]
+
+
+def test_cross_validated_permutation_importance() -> None:
+    """Test 3-fold cross-validated permutation importance on validation splits."""
+    df = load_raw_dataset()
+    X_train, _, y_train, _, _ = split_dataset(df, save_manifest=False)
+
+    pipe = create_hist_gradient_boosting_pipeline(max_iter=20)
+    res, df_ranked = compute_cross_validated_permutation_importance(
+        pipeline=pipe,
+        X_train=X_train.iloc[:200],
+        y_train=y_train.iloc[:200],
+        scoring="average_precision",
+        n_splits=3,
+        n_repeats=2,
+        random_state=42,
+    )
+
+    assert res.n_splits == 3
+    assert res.evaluation_type == "cross_validated_out_of_fold"
+    assert len(res.feature_names) == 47
+    assert len(df_ranked) == 47
+    assert df_ranked["rank"].iloc[0] == 1
+
+
+def test_tree_shap_calibrated_cv_ensemble_additivity() -> None:
+    """Test TreeShapExplainer on CalibratedClassifierCV ensemble satisfies exact additivity for both classes."""
+    from sklearn.calibration import CalibratedClassifierCV
+
+    df = load_raw_dataset()
+    X_train, _, y_train, _, _ = split_dataset(df, save_manifest=False)
+
+    pipe = create_hist_gradient_boosting_pipeline(max_iter=20)
+    calib_clf = CalibratedClassifierCV(estimator=pipe, method="sigmoid", cv=3)
+    calib_clf.fit(X_train.iloc[:180], y_train.iloc[:180])
+
+    explainer = TreeShapExplainer(calib_clf)
+    assert explainer._is_calibrated_cv is True
+    assert len(explainer._explainers) == 3
+
+    # Test sample 1 (predicted retained or churned)
+    for sample_idx in [0, 1]:
+        sample = X_train.iloc[sample_idx]
+        explanation = explainer.explain_record(sample, threshold=0.30, top_n=5)
+
+        assert explanation.explained_target == "ensemble_base_decision_margin"
+        assert explanation.ensemble_size == 3
+        total_shap = sum(a.shap_value for a in explanation.all_attributions)
+        expected_margin = explanation.base_value_margin + total_shap
+        assert np.isclose(expected_margin, explanation.model_output_margin, atol=1e-3)

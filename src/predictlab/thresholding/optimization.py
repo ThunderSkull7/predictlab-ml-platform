@@ -17,10 +17,11 @@ class ThresholdPolicyResult(BaseModel):
     """Encapsulates selected decision threshold and its policy evaluation metrics."""
 
     objective: str = Field(description="Optimization objective ('cost', 'f1', 'f2', 'balanced_accuracy', 'default')")
-    selected_threshold: float = Field(description="Selected operating decision threshold")
-    in_sample_metrics: dict[str, float] = Field(description="Performance on training data used for selection")
-    out_of_fold_metrics: dict[str, float] = Field(description="Honest nested out-of-fold evaluated performance")
+    selected_threshold: float = Field(description="Selected operating decision threshold from pooled training predictions")
+    in_sample_metrics: dict[str, float] = Field(description="Descriptive (selection-optimistic) performance on pooled predictions")
+    out_of_fold_metrics: dict[str, float] = Field(description="Honest nested out-of-fold evaluated performance across splits")
     optimism_delta: dict[str, float] = Field(description="In-sample minus out-of-fold metric differences")
+    fold_details: list[dict[str, float]] = Field(default_factory=list, description="Per-fold threshold choices and evaluation metrics")
     selection_notes: str = Field(description="Methodological explanation and limitations")
 
 
@@ -119,14 +120,42 @@ def evaluate_threshold_policy_nested(
     cv = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
     oof_preds = np.zeros_like(y_true_arr)
     fold_thresholds = []
+    fold_details = []
 
-    for train_idx, val_idx in cv.split(y_prob_arr, y_true_arr):
+    for fold_idx, (train_idx, val_idx) in enumerate(cv.split(y_prob_arr, y_true_arr), start=1):
         y_tr, p_tr = y_true_arr[train_idx], y_prob_arr[train_idx]
-        p_va = y_prob_arr[val_idx]
+        y_va, p_va = y_true_arr[val_idx], y_prob_arr[val_idx]
 
         fold_th, _ = optimize_threshold(y_tr, p_tr, objective=objective, cost_matrix=cost_matrix)
         fold_thresholds.append(fold_th)
-        oof_preds[val_idx] = (p_va >= fold_th).astype(int)
+        fold_pred = (p_va >= fold_th).astype(int)
+        oof_preds[val_idx] = fold_pred
+
+        # Fold validation metrics
+        f_tp = int(np.sum((fold_pred == 1) & (y_va == 1)))
+        f_fp = int(np.sum((fold_pred == 1) & (y_va == 0)))
+        f_tn = int(np.sum((fold_pred == 0) & (y_va == 0)))
+        f_fn = int(np.sum((fold_pred == 0) & (y_va == 1)))
+        f_prec = f_tp / (f_tp + f_fp) if (f_tp + f_fp) > 0 else 0.0
+        f_rec = f_tp / (f_tp + f_fn) if (f_tp + f_fn) > 0 else 0.0
+        f_f1 = (2.0 * f_prec * f_rec) / (f_prec + f_rec) if (f_prec + f_rec) > 0 else 0.0
+
+        fold_rec_dict: dict[str, float] = {
+            "fold": float(fold_idx),
+            "threshold": round(float(fold_th), 4),
+            "precision": round(float(f_prec), 4),
+            "recall": round(float(f_rec), 4),
+            "f1": round(float(f_f1), 4),
+            "true_positives": float(f_tp),
+            "false_positives": float(f_fp),
+            "true_negatives": float(f_tn),
+            "false_negatives": float(f_fn),
+        }
+        if objective == "cost" and cost_matrix is not None:
+            f_cost = cost_matrix.compute_total_cost(f_tp, f_fp, f_tn, f_fn)
+            fold_rec_dict["total_cost"] = round(float(f_cost), 2)
+            fold_rec_dict["cost_per_customer"] = round(float(f_cost / len(y_va)), 4)
+        fold_details.append(fold_rec_dict)
 
     # Compute out-of-fold confusion matrix and metrics
     tp = int(np.sum((oof_preds == 1) & (y_true_arr == 1)))
@@ -141,18 +170,19 @@ def evaluate_threshold_policy_nested(
     f2 = (5.0 * prec * rec) / ((4.0 * prec) + rec) if ((4.0 * prec) + rec) > 0 else 0.0
     bacc = 0.5 * (rec + spec)
 
-    oof_metrics = {
+    oof_metrics: dict[str, float] = {
         "precision": round(prec, 4),
         "recall": round(rec, 4),
         "specificity": round(spec, 4),
         "f1": round(f1, 4),
         "f2": round(f2, 4),
         "balanced_accuracy": round(bacc, 4),
-        "true_positives": tp,
-        "false_positives": fp,
-        "true_negatives": tn,
-        "false_negatives": fn,
+        "true_positives": float(tp),
+        "false_positives": float(fp),
+        "true_negatives": float(tn),
+        "false_negatives": float(fn),
         "mean_fold_threshold": round(float(np.mean(fold_thresholds)), 4),
+        "std_fold_threshold": round(float(np.std(fold_thresholds)), 4),
     }
 
     if objective == "cost" and cost_matrix is not None:
@@ -167,9 +197,13 @@ def evaluate_threshold_policy_nested(
             optimism[k] = round(in_sample_row[k] - oof_metrics[k], 4)
 
     notes = (
-        f"Selected threshold {in_sample_thresh:.4f} under objective '{objective}'. "
-        f"Mean fold threshold was {np.mean(fold_thresholds):.4f} (std={np.std(fold_thresholds):.4f}). "
-        f"Out-of-fold F1={f1:.4f} (optimism delta={optimism.get('f1', 0.0):+.4f})."
+        f"Selected threshold {in_sample_thresh:.4f} via direct optimization across pooled predictions "
+        f"(descriptive/optimistic in-sample F1={in_sample_row.get('f1', 0.0):.4f}). "
+        f"Across {n_splits} nested validation splits, optimal thresholds were {[round(t, 2) for t in fold_thresholds]} "
+        f"(mean={np.mean(fold_thresholds):.4f}, std={np.std(fold_thresholds):.4f}). "
+        f"Out-of-fold F1={f1:.4f} (optimism delta={optimism.get('f1', 0.0):+.4f}). "
+        "Notice: optimism delta quantifies empirical policy stability across CV splits; "
+        "it does not prove the absence of out-of-sample overfitting."
     )
 
     logger.info("Threshold Policy Evaluation: %s", notes)
@@ -180,6 +214,7 @@ def evaluate_threshold_policy_nested(
         in_sample_metrics=in_sample_row,
         out_of_fold_metrics=oof_metrics,
         optimism_delta=optimism,
+        fold_details=fold_details,
         selection_notes=notes,
     )
 

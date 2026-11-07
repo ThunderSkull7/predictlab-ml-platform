@@ -1,0 +1,9 @@
+cost_ratio_fn_to_fp,cost_fn,cost_fp,cost_tp,optimal_threshold,recall_at_optimal,precision_at_optimal,f1_at_optimal,min_total_cost,min_cost_per_customer,default_total_cost,default_cost_per_customer,cost_savings_dollars,savings_pct_vs_default,scenario_name
+0.2:1,20.0,100.0,0.0,0.79,0.1117,0.8883,0.1985,28660.0,5.087,52640.0,9.3433,23980.0,45.55,misclassification_penalty_only
+0.5:1,50.0,100.0,0.0,0.7,0.2348,0.8032,0.3634,65800.0,11.6791,73550.0,13.0547,7750.0,10.54,misclassification_penalty_only
+1.0:1,100.0,100.0,0.0,0.49,0.5418,0.6705,0.5993,108300.0,19.2226,108400.0,19.2403,100.0,0.09,misclassification_penalty_only
+2.0:1,200.0,100.0,0.0,0.35,0.7017,0.5812,0.6358,164800.0,29.251,178100.0,31.6116,13300.0,7.47,misclassification_penalty_only
+3.0:1,300.0,100.0,0.0,0.26,0.8027,0.5238,0.6339,197600.0,35.0728,247800.0,43.983,50200.0,20.26,misclassification_penalty_only
+5.0:1,500.0,100.0,0.0,0.18,0.8809,0.467,0.6104,239300.0,42.4743,387200.0,68.7256,147900.0,38.2,misclassification_penalty_only
+8.0:1,800.0,100.0,0.0,0.1,0.9498,0.3997,0.5626,273300.0,48.5091,596300.0,105.8395,323000.0,54.17,misclassification_penalty_only
+10.0:1,1000.0,100.0,0.0,0.1,0.9498,0.3997,0.5626,288300.0,51.1715,735700.0,130.5822,447400.0,60.81,misclassification_penalty_only

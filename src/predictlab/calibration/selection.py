@@ -106,6 +106,16 @@ def fit_final_calibrated_pipeline(
 ) -> Any:
     """Fit the chosen calibration architecture on the complete training partition.
 
+    Architectural & Fitting Semantics:
+    1. If selected_method == 'uncalibrated':
+       Clones base_pipeline and fits a single pipeline directly on full X_train (N=5,634).
+    2. If selected_method in {'sigmoid', 'isotonic'}:
+       Constructs CalibratedClassifierCV(estimator=base_pipeline, method=selected_method, cv=inner_cv).
+       Scikit-learn fits an ensemble of `inner_cv` (default 5) distinct base pipelines, each trained
+       on an inner fold (4/5 of X_train, N≈4,507). The corresponding calibrator is fitted on the
+       left-out inner validation split (1/5 of X_train, N≈1,127). At inference time, the final
+       probability prediction is the arithmetic average across all `inner_cv` calibrated estimators.
+
     Parameters
     ----------
     base_pipeline : Pipeline

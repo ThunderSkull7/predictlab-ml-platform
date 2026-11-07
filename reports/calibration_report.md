@@ -11,7 +11,8 @@ Phase 5 implements a leakage-free calibration framework:
 - **Leakage-Free Nested Cross-Validation**: We deployed a $5 \times 5$ nested cross-validation architecture (`StratifiedKFold(n_splits=5, shuffle=True, random_state=42)` in both outer and inner loops), preventing data reuse between calibrator fitting and validation scoring.
 - **Champion Selection**: **Sigmoid Calibration (Platt Scaling)** was selected as the champion calibration method, achieving the lowest Brier Score (**0.1335 ± 0.0056**) and lowest Log Loss (**0.4116 ± 0.0133**) while strictly preserving and slightly improving discriminative ranking (PR-AUC **0.6697 ± 0.0215**, ROC-AUC **0.8498 ± 0.0123**).
 - **Isotonic Regression Deficiencies**: Isotonic calibration exhibited higher log loss (**0.4181 ± 0.0189**) and depressed PR-AUC (**0.6669 ± 0.0216**) due to step-function plateaus arising from non-parametric isotonic fitting on moderate sample sizes.
-- **Model Artifact Preservation**: The resulting calibrated pipeline was refitted across the full training dataset and serialized to [`artifacts/model_phase5_calibrated.joblib`](file:///d:/Project/Predictive%20Analytics%20Platform/artifacts/model_phase5_calibrated.joblib). The approved Phase 4 artifact is permanently archived as [`artifacts/model_phase4.joblib`](file:///d:/Project/Predictive%20Analytics%20Platform/artifacts/model_phase4.joblib).
+- **Ensemble Fitting Semantics**: The resulting production calibrated model was fitted using `CalibratedClassifierCV(estimator=pipeline, method="sigmoid", cv=5)` across the training partition. In accordance with scikit-learn 1.6.1 mechanics, this creates an **ensemble of 5 base pipelines** (each trained on $80\%$ splits) coupled with 5 Sigmoid calibrators (each fitted on the corresponding $20\%$ validation fold). At inference time, predictions are computed as the arithmetic mean of the 5 calibrated probabilities.
+- **Model Artifact Preservation**: The calibrated model was serialized to [`artifacts/model_phase5_calibrated.joblib`](file:///d:/Project/Predictive%20Analytics%20Platform/artifacts/model_phase5_calibrated.joblib). The approved Phase 4 artifact is permanently archived as [`artifacts/model_phase4.joblib`](file:///d:/Project/Predictive%20Analytics%20Platform/artifacts/model_phase4.joblib).
 
 > [!IMPORTANT]
 > **Cross-Sectional Scope Limitation**: The IBM Telco Customer Churn dataset is a retrospective cross-sectional customer snapshot. Calibrated probabilities reflect statistical resemblance to churned subscribers in historical accounts, **not temporal longitudinal hazard rates or survival probabilities**.
@@ -90,7 +91,7 @@ Both Brier score and Log Loss are strictly proper scoring rules minimized only w
 - While the numerical magnitude of Brier score reduction appears modest, it represents consistent across-fold reduction in quadratic error, reflecting improved reliability in the tails.
 
 #### 2. Binning Sensitivity: Uniform vs Quantile ECE
-Expected Calibration Error is known to be sensitive to binning geometry:
+Expected Calibration Error is sensitive to binning geometry:
 - **Uniform binning** ($B=10$, width $0.10$): ECE drops from $0.0312$ (uncalibrated) to **$0.0295$** (sigmoid). In extreme probability bins ($p > 0.80$), low sample counts cause slight volatility.
 - **Quantile binning** ($B=10$, equal deciles of predicted scores): Quantile ECE drops to **$0.0265$** for Sigmoid, confirming that across evenly occupied subscriber cohorts, expected deviation between predicted probability and actual churn frequency is under $2.7\%$.
 
@@ -128,12 +129,21 @@ The automated selection rationale recorded in [`reports/experiments/calibration_
 
 ---
 
-## 5. Serialized Model Artifact Specification
+## 5. Serialized Model Artifact Specification & Fitting Semantics
 
-The final production calibrated model was refitted on the entire training set ($N = 5,634$) using `CalibratedClassifierCV(estimator=pipeline, method="sigmoid", cv=5)` and serialized via joblib to:
+The final production calibrated model was fitted on the training set ($N = 5,634$) using `CalibratedClassifierCV(estimator=pipeline, method="sigmoid", cv=5)` and serialized via joblib to:
 [`artifacts/model_phase5_calibrated.joblib`](file:///d:/Project/Predictive%20Analytics%20Platform/artifacts/model_phase5_calibrated.joblib)
 
-### Artifact Bundle Manifest
+### 5.1 Architecture & Ensemble Mechanics
+It is critical to distinguish between single-model refitting and scikit-learn's `CalibratedClassifierCV` mechanics:
+- When `cv=5` is passed, `CalibratedClassifierCV` partitions the training dataset into 5 cross-validation folds.
+- For each fold $k \in \{1, \dots, 5\}$, a distinct base pipeline clone is trained on $4/5$ of the training records ($N \approx 4,507$), and a Sigmoid calibrator is fitted on the remaining $1/5$ holdout fold ($N \approx 1,127$).
+- The fitted object stores `calibrated_classifiers_`, a list of **5 calibrated base pipelines**.
+- At prediction time (`predict_proba`), the ensemble queries all 5 calibrated pipelines and averages their probabilities:
+  $$\hat{P}(y=1 \mid x) = \frac{1}{5} \sum_{k=1}^5 \sigma\left(A_k \cdot f_k(x) + B_k\right)$$
+- This ensemble structure provides bagging-like variance reduction while guaranteeing that no calibrator was fitted on the same records used to train its corresponding base tree estimator.
+
+### 5.2 Artifact Metadata Specification
 ```python
 {
     "pipeline": CalibratedClassifierCV(
@@ -142,18 +152,28 @@ The final production calibrated model was refitted on the entire training set ($
             ("classifier", HistGradientBoostingClassifier(...))
         ]),
         method="sigmoid",
-        cv="prefit" (after 5-fold ensemble refit)
+        cv=5
     ),
     "metadata": {
         "model_version": "5.0.0",
-        "model_family": "Tree",
-        "model_name": "HistGradientBoostingClassifier",
-        "feature_count": 47,
+        "model_name": "Hist Gradient Boosting (Sigmoid Calibrated)",
+        "selected_estimator": "HistGradientBoostingClassifier",
         "calibration_method": "sigmoid",
-        "decision_threshold": 0.18,  # Cost-optimal operational threshold
+        "ensemble_size": 5,
+        "calibrated_classifier_cv_semantics": (
+            "Final artifact is a 5-fold ensemble of base pipelines (each trained on 80% inner fold) "
+            "with 5 Sigmoid (Platt) calibrators fitted on 20% validation splits; inference averages "
+            "the 5 calibrated probability outputs."
+        ),
+        "decision_threshold": 0.19,  # Cost-optimal operational threshold (comprehensive incentive)
+        "default_threshold": 0.50,
+        "cost_model_primary": {
+            "scenario": "comprehensive_incentive",
+            "formula": "TotalCost = C_FP*FP + C_FN*FN + C_TP*TP + C_TN*TN",
+            "parameters": {"C_FP": 100.0, "C_FN": 500.0, "C_TP": 100.0, "C_TN": 0.0}
+        },
         "dataset_sha256": "16320c9c1ec72448db59aa0a26a0b95401046bef5d02fd3aeb906448e3055e91",
-        "saved_at_utc": "2026-11-07T10:41:48.330421+00:00",
-        "cv_metrics_mean": {
+        "calibration_metrics": {
             "average_precision": 0.6697,
             "roc_auc": 0.8498,
             "brier_score": 0.1335,

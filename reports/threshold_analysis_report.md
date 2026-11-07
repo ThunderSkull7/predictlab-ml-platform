@@ -2,104 +2,129 @@
 
 ## 1. Executive Summary
 
-This report documents the empirical findings and operational governance of **Decision Threshold Analysis, Cost Sensitivity Modeling, and Customer Risk Tiering** in Phase 5 of PredictLab.
+This report documents the empirical findings, cost modeling reconciliations, and operational governance of **Decision Threshold Analysis, Cost Sensitivity Modeling, and Customer Risk Tiering** in Phase 5 of PredictLab.
 
 A standard machine-learning classifier assigns binary outcomes using a default probability threshold of $\tau = 0.50$. In practical customer retention, this default threshold carries an implicit and hazardous assumption: that the cost of a false positive ($C_{\text{FP}}$, offering retention outreach to a subscriber who would have stayed anyway) equals the cost of a false negative ($C_{\text{FN}}$, failing to intervene with a subscriber who subsequently cancels service).
 
 In telecommunications and subscription businesses, losing a subscriber costs several times more than delivering a proactive retention incentive. Consequently:
-- **Default Threshold Failure**: Operating at $\tau = 0.50$ results in a high false-negative rate (Recall = $52.3\%$), missing **713 out of 1,495 churners** in the training cohort.
-- **Cost-Optimal Threshold Shift**: Under a realistic business cost structure ($C_{\text{FN}} = \$500$, $C_{\text{FP}} = \$100$, an asymmetric ratio of $5:1$), the cost-minimizing threshold shifts from $0.50$ down to **$\tau^* = 0.18$**.
-- **Dramatic Retention Impact**: At $\tau^* = 0.18$, Recall surges from **$52.3\%$ to $88.1\%$**, capturing $1,317$ churners and cutting missed churners from $713$ down to **$178$** (a **$75.0\%$ reduction in undetected churn**).
-- **Expected Cost Reduction**: Total operational risk cost drops by **$38.2\%$** relative to the naive $0.50$ threshold.
-- **Selection Optimism Audit**: A nested out-of-fold cross-validation policy evaluation confirmed minimal selection optimism (optimism delta on F1 was only **$+0.0022$**), verifying that the threshold policy generalizes reliably without overfitting.
-- **Operational Risk Tiers**: Calibrated probabilities are partitioned into three contiguous operational cohorts: **Low Risk** ($52.5\%$ of accounts, $7.1\%$ observed churn), **Medium Risk** ($26.4\%$ of accounts, $32.7\%$ observed churn), and **High Risk** ($21.0\%$ of accounts, $67.3\%$ observed churn).
+- **Default Threshold Failure**: Operating at $\tau = 0.50$ on calibrated probabilities results in a high false-negative rate (Recall = $53.38\%$), missing **697 out of 1,495 churners** in the training cohort ($N = 5,634$).
+- **Cost-Optimal Threshold Shift**: Under a realistic business cost structure ($C_{\text{FN}} = \$500$, $C_{\text{FP}} = \$100$, an asymmetric ratio of $5:1$), the cost-minimizing threshold shifts from $0.50$ down to **$\tau^* = 0.19$** (under the Comprehensive Incentive Model) or **$\tau^* = 0.18$** (under the Misclassification-Penalty-Only Model).
+- **Dramatic Retention Impact**: At $\tau^* = 0.19$, Recall surges from **$53.38\%$ to $87.29\%$**, capturing $1,305$ churners and cutting missed churners from $697$ down to **$190$** (a **$72.74\%$ reduction in undetected churn**). At $\tau^* = 0.18$, Recall reaches **$88.09\%$**, cutting missed churners to **$178$** ($74.46\%$ reduction).
+- **Expected Cost Reduction & Reconciliation**:
+  - Under the **Comprehensive Incentive Model** ($C_{\text{TP}} = \$100, C_{\text{FP}} = \$100, C_{\text{FN}} = \$500, C_{\text{TN}} = \$0$), operational cost drops from **$\$467,000$** ($\$82.89$/customer) down to **$\$370,100$** ($\$65.69$/customer) at $\tau^* = 0.19$, delivering a **$20.75\%$ net cost reduction ($\$96,900$ saved)**.
+  - Under the **Misclassification-Penalty-Only Model** ($C_{\text{TP}} = \$0, C_{\text{FP}} = \$100, C_{\text{FN}} = \$500, C_{\text{TN}} = \$0$), operational penalty cost drops from **$\$387,200$** ($3,872$ cost units) down to **$\$239,300$** ($2,393$ cost units) at $\tau^* = 0.18$, delivering a **$38.20\%$ cost reduction ($\$147,900$ saved)**.
+- **Selection Optimism Audit**: A nested 5-fold cross-validation policy evaluation confirmed minimal selection optimism across validation folds (mean fold threshold $\tau = 0.1980 \pm 0.0098$, out-of-fold F1 = $0.6159$, optimism delta = $-0.0012$). This delta measures empirical policy stability across data splits, though it does not constitute absolute proof against out-of-distribution overfitting.
+- **Operational Risk Tiers**: Calibrated probabilities are partitioned into three contiguous operational cohorts: **Low Risk** ($52.5\%$ of accounts, $7.1\%$ observed churn), **Medium Risk** ($26.4\%$ of accounts, $32.7\%$ observed churn), and **High Risk** ($21.0\%$ of accounts, $67.3\%$ observed churn). Risk tiers are decoupled from the binary classification threshold.
 
 > [!IMPORTANT]
-> **Cross-Sectional Scope Limitation**: The dataset is a cross-sectional snapshot of customer accounts at a single observation point. All model evaluations represent retrospective classification and risk ranking across subscriber accounts, **not temporal forecasting or forward-looking event prediction**.
+> **Cross-Sectional Scope Limitation**: The dataset is a cross-sectional snapshot of customer accounts at a single observation point. All model evaluations represent retrospective classification and risk ranking across subscriber accounts, **not temporal forecasting or forward-looking event prediction**. Cost parameters are hypothetical scenario assumptions for sensitivity analysis, not verified corporate accounting figures.
 
 ---
 
 ## 2. Systematic Threshold Evaluation Grid
 
-We evaluated classification performance across 81 discrete decision thresholds spanning $\tau \in [0.10, 0.90]$ with a step size of $0.01$ strictly on the out-of-fold cross-validated probability estimates ($N = 5,634$).
+We evaluated classification performance across 81 discrete decision thresholds spanning $\tau \in [0.10, 0.90]$ with a step size of $0.01$ strictly on the out-of-fold calibrated probability estimates ($N = 5,634$).
 
 ### 2.1 Threshold Benchmark Comparison Table
 
-The table below contrasts key threshold operating points:
+The table below contrasts key threshold operating points evaluated on the calibrated out-of-fold predictions:
 
-| Threshold ($\tau$) | Precision | Recall | Specificity | F1-Score | F2-Score | Balanced Accuracy | True Positives | False Positives | False Negatives | True Negatives | Predicted Pos Rate | Total Cost ($5:1$) |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| **0.10** | 0.3703 | 0.9632 | 0.4071 | 0.5348 | 0.7291 | 0.6852 | 1,440 | 2,454 | 55 | 1,685 | 69.1% | $2,729 |
-| **0.18 ($\tau^*$)** | **0.4670** | **0.8809** | **0.6369** | **0.6104** | **0.7483** | **0.7589** | **1,317** | **1,503** | **178** | **2,636** | **50.1%** | **$2,393** |
-| **0.25** | 0.5218 | 0.7960 | 0.7328 | 0.6303 | 0.7196 | 0.7644 | 1,190 | 1,090 | 305 | 3,049 | 40.5% | $2,615 |
-| **0.30** | 0.5517 | 0.7365 | 0.7850 | 0.6309 | 0.6896 | 0.7607 | 1,101 | 895 | 394 | 3,244 | 35.4% | $2,865 |
-| **0.40** | 0.6075 | 0.6274 | 0.8524 | 0.6173 | 0.6233 | 0.7399 | 938 | 606 | 557 | 3,533 | 27.4% | $3,391 |
-| **0.50 (Default)** | **0.6560** | **0.5231** | **0.9009** | **0.5820** | **0.5449** | **0.7120** | **782** | **410** | **713** | **3,729** | **21.2%** | **$3,975** |
-| **0.60** | 0.6845 | 0.4181 | 0.9304 | 0.5191 | 0.4532 | 0.6742 | 625 | 288 | 870 | 3,851 | 16.2% | $4,638 |
-| **0.70** | 0.7011 | 0.2836 | 0.9575 | 0.4036 | 0.3214 | 0.6206 | 424 | 181 | 1,071 | 3,958 | 10.7% | $5,536 |
+| Threshold ($\tau$) | Precision | Recall | Specificity | F1-Score | F2-Score | Balanced Accuracy | True Positives | False Positives | False Negatives | True Negatives | Predicted Pos Rate | Total Cost (Comp $5:1$) | Total Cost (Misclass $5:1$) |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| **0.10** | 0.3997 | 0.9498 | 0.4847 | 0.5626 | 0.7448 | 0.7172 | 1,420 | 2,133 | 75 | 2,006 | 63.06% | $392,800 | $250,800 |
+| **0.18** | 0.4670 | 0.8809 | 0.6369 | 0.6104 | 0.7483 | 0.7589 | 1,317 | 1,503 | 178 | 2,636 | 50.05% | $371,000 | **$239,300 ($\tau^*_{\text{err}}$)** |
+| **0.19 ($\tau^*_{\text{cost}}$)** | **0.4744** | **0.8729** | **0.6506** | **0.6147** | **0.7473** | **0.7618** | **1,305** | **1,446** | **190** | **2,693** | **48.83%** | **$370,100 ($\tau^*$)** | **$239,600** |
+| **0.20** | 0.4804 | 0.8595 | 0.6642 | 0.6163 | 0.7423 | 0.7619 | 1,285 | 1,390 | 210 | 2,749 | 47.48% | $372,500 | $244,000 |
+| **0.25** | 0.5140 | 0.8087 | 0.7238 | 0.6285 | 0.7255 | 0.7663 | 1,209 | 1,143 | 286 | 2,996 | 41.75% | $378,200 | $257,300 |
+| **0.28 ($F_1^*$)** | 0.5367 | 0.7833 | 0.7557 | **0.6369** | 0.7173 | 0.7695 | 1,171 | 1,011 | 324 | 3,128 | 38.73% | $380,200 | $263,100 |
+| **0.30** | 0.5446 | 0.7552 | 0.7719 | 0.6328 | 0.7010 | 0.7636 | 1,129 | 944 | 366 | 3,195 | 36.79% | $390,300 | $277,400 |
+| **0.40** | 0.6186 | 0.6401 | 0.8575 | 0.6292 | 0.6357 | 0.7488 | 957 | 590 | 538 | 3,549 | 27.46% | $423,700 | $328,000 |
+| **0.50 (Default)** | **0.6734** | **0.5338** | **0.9065** | **0.5955** | **0.5569** | **0.7201** | **798** | **387** | **697** | **3,752** | **21.03%** | **$467,000** | **$387,200** |
+| **0.60** | 0.7176 | 0.3773 | 0.9464 | 0.4945 | 0.4168 | 0.6618 | 564 | 222 | 931 | 3,917 | 13.95% | $544,100 | $487,700 |
+| **0.70** | 0.8032 | 0.2348 | 0.9792 | 0.3634 | 0.2735 | 0.6070 | 351 | 86 | 1,144 | 4,053 | 7.76% | $615,700 | $580,600 |
+
+*Note: All confusion matrix counts and metrics satisfy exact sample conservation: $\text{TP} + \text{FP} + \text{FN} + \text{TN} = 1,495 + 4,139 = 5,634$.*
 
 ![Figure 24: Threshold Precision Recall and F-Scores](figures/24_threshold_precision_recall_f1.png)
 
 ### 2.2 Threshold Dynamics & Trade-Offs
 
-1. **The Precision-Recall Frontier**: As $\tau$ increases from $0.10$ to $0.70$, Precision rises monotonically from $0.370$ to $0.701$, but Recall collapses precipitously from $96.3\%$ to $28.4\%$.
+1. **The Precision-Recall Frontier**: As $\tau$ increases from $0.10$ to $0.70$, Precision rises monotonically from $0.3997$ to $0.8032$, but Recall collapses precipitously from $94.98\%$ to $23.48\%$.
 2. **F-Beta Metric Sensitivity**:
-   - The balanced **F1-Score** reaches its maximum of **$0.6318$** around $\tau = 0.28$.
-   - The recall-emphasizing **F2-Score** ($F_2$, weighting recall twice as heavily as precision) peaks at **$\tau = 0.17$** ($F_2 = 0.7502$).
-   - The precision-emphasizing **F0.5-Score** ($F_{0.5}$) peaks at **$\tau = 0.49$** ($F_{0.5} = 0.6288$).
-3. **Balanced Accuracy**: Balanced accuracy peaks at $\tau = 0.24$ with a score of **$0.7651$** ($76.5\%$).
+   - The balanced **F1-Score** reaches its empirical peak of **$0.6369$** at $\tau = 0.28$.
+   - The recall-weighting **F2-Score** ($F_2$, weighting recall twice as heavily as precision) peaks at **$\tau = 0.18$** ($F_2 = 0.7483$).
+   - The precision-weighting **F0.5-Score** ($F_{0.5}$) peaks at **$\tau = 0.49$** ($F_{0.5} = 0.6432$).
+3. **Balanced Accuracy**: Balanced accuracy peaks at $\tau = 0.28$ with a score of **$0.7695$** ($76.95\%$).
 
 ---
 
-## 3. Cost-Sensitive Decision Modeling
+## 3. Cost-Sensitive Decision Modeling & Reconciliation
 
 ### 3.1 Financial Formulation
 
 To translate statistical probabilities into direct business value, we configure an operational cost matrix:
-$$\text{Expected Cost} = C_{\text{FP}} \cdot \text{FP} + C_{\text{FN}} \cdot \text{FN} + C_{\text{TP}} \cdot \text{TP} + C_{\text{TN}} \cdot \text{TN}$$
+$$\text{Total Cost} = C_{\text{FP}} \cdot \text{FP} + C_{\text{FN}} \cdot \text{FN} + C_{\text{TP}} \cdot \text{TP} + C_{\text{TN}} \cdot \text{TN}$$
 
 Under standard telecommunications retention assumptions:
 - **False Negative ($C_{\text{FN}} = \$500$)**: Customer churns undetected. Represents lost customer lifetime value (CLV), lost gross margin, and replacement customer acquisition cost (CAC).
 - **False Positive ($C_{\text{FP}} = \$100$)**: Customer was not at risk but received a retention discount, contract incentive, or dedicated service agent call. Represents unneeded concession cost.
-- **True Positive ($C_{\text{TP}} = \$100$)**: Customer at risk was correctly targeted with the retention incentive.
+- **True Positive ($C_{\text{TP}}$)**: Retention incentive delivered to an actual at-risk subscriber:
+  - In the **Comprehensive Incentive Model**, $C_{\text{TP}} = \$100$ (delivering the retention offer carries marketing/discount cost).
+  - In the **Misclassification-Penalty-Only Model**, $C_{\text{TP}} = \$0$ (only misclassification errors are penalized).
 - **True Negative ($C_{\text{TN}} = \$0$)**: Satisfied customer remained with no unnecessary intervention.
 
-### 3.2 Total Cost Curve
+### 3.2 Total Cost Reconciliation: 20.75% vs 38.20% Savings
 
-At the default threshold $\tau = 0.50$:
-$$\text{Cost}_{0.50} = 410 \times \$100 + 713 \times \$500 + 782 \times \$100 + 0 = \$475,700 \quad (\text{Normalized: } 3,975 \text{ cost units})$$
+The previous Phase 5 report cited a $38.2\%$ cost reduction alongside an equation showing $C_{\text{TP}} = \$100$. This numerical discrepancy arose because the normalized cost units ($3,975$ down to $2,393$) were evaluated under the 2-term error penalty ($C_{\text{TP}} = 0$), while the narrative and LaTeX formula included $+ C_{\text{TP}} \cdot \text{TP}$.
 
-At the cost-optimal threshold $\tau^* = 0.18$:
-$$\text{Cost}_{0.18} = 1,503 \times \$100 + 178 \times \$500 + 1,317 \times \$100 + 0 = \$371,000 \quad (\text{Normalized: } 2,393 \text{ cost units})$$
+Here is the exact mathematical reconciliation on the training cohort ($N = 5,634$):
 
-**Net Cost Savings**: Operating at $\tau^* = 0.18$ achieves a **$38.2\%$ expected cost reduction** ($1,479$ cost units saved in this cohort), directly driven by avoiding 535 costly lost customers ($535 \times \$500 = \$267,500$ in preserved value).
+#### Scenario A: Comprehensive Incentive Model ($C_{\text{TP}} = \$100, C_{\text{FP}} = \$100, C_{\text{FN}} = \$500, C_{\text{TN}} = \$0$)
+- **At Default $\tau = 0.50$**:
+  $$\text{Cost}_{0.50} = 100 \times 387 + 500 \times 697 + 100 \times 798 + 0 = \$38,700 + \$348,500 + \$79,800 = \$467,000 \quad (\$82.89/\text{cust})$$
+- **At Optimal $\tau^* = 0.19$**:
+  $$\text{Cost}_{0.19} = 100 \times 1,446 + 500 \times 190 + 100 \times 1,305 + 0 = \$144,600 + \$95,000 + \$130,500 = \$370,100 \quad (\$65.69/\text{cust})$$
+- **Net Dollar Savings**: $\$467,000 - \$370,100 = \mathbf{\$96,900}$ saved.
+- **Percentage Cost Savings**:
+  $$\text{Savings}_{\text{comp}} = \frac{467,000 - 370,100}{467,000} = \mathbf{20.75\%}$$
+
+#### Scenario B: Misclassification-Penalty-Only Model ($C_{\text{TP}} = \$0, C_{\text{FP}} = \$100, C_{\text{FN}} = \$500, C_{\text{TN}} = \$0$)
+- **At Default $\tau = 0.50$**:
+  $$\text{Cost}_{0.50} = 100 \times 387 + 500 \times 697 + 0 + 0 = \$38,700 + \$348,500 = \$387,200 \quad (3,872 \text{ cost units})$$
+- **At Optimal $\tau^* = 0.18$**:
+  $$\text{Cost}_{0.18} = 100 \times 1,503 + 500 \times 178 + 0 + 0 = \$150,300 + \$89,000 = \$239,300 \quad (2,393 \text{ cost units})$$
+- **Net Dollar Savings**: $\$387,200 - \$239,300 = \mathbf{\$147,900}$ saved ($1,479$ cost units).
+- **Percentage Cost Savings**:
+  $$\text{Savings}_{\text{misclass}} = \frac{387,200 - 239,300}{387,200} = \mathbf{38.20\%}$$
 
 ![Figure 25: Cost Curve and Sensitivity](figures/25_cost_curve_and_sensitivity.png)
 
+Both models demonstrate that operating at a lowered threshold ($\tau \approx 0.18 - 0.19$) delivers substantial business value by preventing hundreds of costly undetected churn events.
+
 ### 3.3 Sensitivity Across Asymmetric Cost Ratios ($C_{\text{FN}} : C_{\text{FP}}$)
 
-Because different telecom enterprises face distinct margins and retention economics, we conducted a sensitivity analysis sweeping cost ratios from $0.2:1$ to $10:1$:
+Because telecom business units face varying retention margins and marketing costs, we evaluated optimal thresholds across a spectrum of cost ratios under both models:
 
-| Cost Ratio ($C_{\text{FN}} : C_{\text{FP}}$) | Implied Context | Optimal Threshold ($\tau^*$) | Recall at $\tau^*$ | Precision at $\tau^*$ | Cost per Customer ($) | Cost Savings vs $\tau=0.50$ |
-|---|---|---|---|---|---|---|
-| **0.5 : 1** | Very cheap churn / costly incentive | 0.65 | 0.347 | 0.693 | 0.182 | +8.4% |
-| **1.0 : 1** | Symmetric cost | 0.50 | 0.523 | 0.656 | 0.285 | 0.0% (baseline) |
-| **2.0 : 1** | Modest retention urgency | 0.35 | 0.686 | 0.582 | 0.358 | +14.2% |
-| **3.0 : 1** | Standard subscription service | 0.26 | 0.785 | 0.531 | 0.401 | +23.8% |
-| **5.0 : 1** | High-value subscriber / standard telecom | **0.18** | **0.881** | **0.467** | **0.425** | **+38.2%** |
-| **8.0 : 1** | Enterprise B2B contract | 0.13 | 0.938 | 0.412 | 0.458 | +51.6% |
-| **10.0 : 1** | High CLV / catastrophic churn impact | 0.11 | 0.957 | 0.384 | 0.479 | +58.9% |
-
-**Key Takeaway**: As the cost of a missed churner grows relative to the intervention cost, the rational decision boundary drops exponentially towards the lower tail of the probability distribution.
+#### Comprehensive Incentive Model ($C_{\text{TP}} = 100, C_{\text{FP}} = 100$):
+| Cost Ratio ($C_{\text{FN}} : C_{\text{FP}}$) | Cost FN | Optimal $\tau^*$ | Recall at $\tau^*$ | Precision at $\tau^*$ | Min Total Cost ($) | Default Cost ($) | Net Savings ($) | Savings % |
+|---|---|---|---|---|---|---|---|---|
+| **0.2 : 1** | $20 | 0.90 | 0.0000 | 0.0000 | $29,900 | $132,440 | $102,540 | +77.42% |
+| **0.5 : 1** | $50 | 0.90 | 0.0000 | 0.0000 | $74,750 | $153,350 | $78,600 | +51.26% |
+| **1.0 : 1** | $100 | 0.88 | 0.0020 | 1.0000 | $149,500 | $188,200 | $38,700 | +20.56% |
+| **2.0 : 1** | $200 | 0.49 | 0.5418 | 0.6705 | $257,800 | $257,900 | $100 | +0.04% |
+| **3.0 : 1** | $300 | 0.35 | 0.7017 | 0.5812 | $314,300 | $327,600 | $13,300 | +4.06% |
+| **5.0 : 1** | **$500** | **0.19** | **0.8729** | **0.4744** | **$370,100** | **$467,000** | **$96,900** | **+20.75%** |
+| **8.0 : 1** | $800 | 0.10 | 0.9498 | 0.3997 | $415,300 | $676,100 | $260,800 | +38.57% |
+| **10.0 : 1** | $1,000 | 0.10 | 0.9498 | 0.3997 | $430,300 | $815,500 | $385,200 | +47.23% |
 
 ---
 
 ## 4. Selection Optimism Audit (Nested Cross-Validation)
 
-Selecting a decision threshold on a finite dataset introduces potential selection optimism (the risk that the chosen threshold performs better on the data used to select it than on unseen data).
+Selecting a decision threshold on a finite dataset introduces potential selection optimism (the risk that the threshold performs better on the data used to select it than on unseen data).
 
-To rigorously quantify this bias, we implemented `evaluate_threshold_policy_nested`:
-- An outer 5-fold cross-validation loop was executed.
+To rigorously quantify empirical policy stability, we implemented `evaluate_threshold_policy_nested`:
+- An outer 5-fold cross-validation split was executed over the calibrated predictions.
 - In each fold, the cost-optimal threshold was determined on 4 training folds and evaluated on the held-out 5th fold.
 
 The results recorded in [`reports/experiments/threshold_policy_evaluation.json`](file:///d:/Project/Predictive%20Analytics%20Platform/reports/experiments/threshold_policy_evaluation.json) are:
@@ -107,40 +132,52 @@ The results recorded in [`reports/experiments/threshold_policy_evaluation.json`]
 ```json
 {
   "objective": "cost",
-  "selected_threshold": 0.18,
-  "mean_fold_threshold": 0.1800,
-  "std_fold_threshold": 0.0110,
+  "selected_threshold": 0.19,
+  "mean_fold_threshold": 0.1980,
+  "std_fold_threshold": 0.0098,
   "in_sample_metrics": {
-    "precision": 0.4670,
-    "recall": 0.8809,
-    "f1": 0.6104,
-    "balanced_accuracy": 0.7589
+    "precision": 0.4744,
+    "recall": 0.8729,
+    "f1": 0.6147,
+    "balanced_accuracy": 0.7618,
+    "total_cost": 370100.0,
+    "cost_savings_vs_default": 96900.0,
+    "savings_pct_vs_default": 20.75
   },
   "out_of_fold_metrics": {
-    "precision": 0.4651,
-    "recall": 0.8783,
-    "f1": 0.6082,
-    "balanced_accuracy": 0.7567
+    "precision": 0.4788,
+    "recall": 0.8629,
+    "f1": 0.6159,
+    "balanced_accuracy": 0.7618,
+    "total_cost": 371900.0,
+    "cost_per_customer": 66.0099
   },
   "optimism_delta": {
-    "precision": +0.0019,
-    "recall": +0.0026,
-    "f1": +0.0022,
-    "balanced_accuracy": +0.0022
-  }
+    "precision": -0.0044,
+    "recall": +0.0100,
+    "f1": -0.0012,
+    "balanced_accuracy": 0.0000
+  },
+  "fold_details": [
+    {"fold": 1, "threshold": 0.21, "f1": 0.6182, "total_cost": 74600.0},
+    {"fold": 2, "threshold": 0.21, "f1": 0.6062, "total_cost": 78100.0},
+    {"fold": 3, "threshold": 0.19, "f1": 0.6000, "total_cost": 76600.0},
+    {"fold": 4, "threshold": 0.19, "f1": 0.6295, "total_cost": 70200.0},
+    {"fold": 5, "threshold": 0.19, "f1": 0.6253, "total_cost": 72400.0}
+  ]
 }
 ```
 
 ### Audit Conclusion
-- The threshold selection is exceptionally stable across folds (standard deviation of optimal threshold is $\pm 0.011$).
-- The optimism delta across all metrics is under **$0.0026$** ($< 0.3\%$).
-- This confirms that $\tau^* = 0.18$ is a robust, generalizable operating policy that will not degrade on out-of-sample data.
+- Fold-level threshold selections varied narrowly between $0.19$ and $0.21$ (mean $\tau = 0.1980$, standard deviation $\pm 0.0098$).
+- The optimism delta on F1 is minimal ($-0.0012$), showing that out-of-fold F1 ($0.6159$) is practically identical to in-sample pooled F1 ($0.6147$).
+- **Methodological Scope**: This optimism delta quantifies empirical policy stability across CV splits; it demonstrates that threshold selection does not collapse or violently fluctuate across folds. It does not prove the absence of out-of-distribution domain shift or temporal deterioration.
 
 ---
 
 ## 5. Operational Customer Churn Risk Tiers
 
-Binary classification forces a hard demarcation that fails to capture nuanced operational realities. PredictLab implements a contiguous, validated three-tier risk partitioning framework via [`RiskTierer`](file:///d:/Project/Predictive%20Analytics%20Platform/src/predictlab/thresholding/risk_tiers.py#L19).
+Binary classification forces a hard cutoff that fails to capture nuanced operational workflows. PredictLab implements a contiguous, validated three-tier risk partitioning framework via [`RiskTierer`](file:///d:/Project/Predictive%20Analytics%20Platform/src/predictlab/thresholding/risk_tiers.py#L19).
 
 ### 5.1 Risk Tier Cohort Profile Table
 
@@ -150,18 +187,23 @@ Binary classification forces a hard demarcation that fails to capture nuanced op
 | **Medium Risk** | $[0.20, 0.50)$ | 1,490 | 26.45% | 0.3340 | **32.68%** | 487 | Proactive value communication; service usage audit; contract renewal reminder; loyalty perks. |
 | **High Risk** | $[0.50, 1.00]$ | 1,185 | 21.03% | 0.7188 | **67.34%** | 798 | Priority retention incentive; outbound retention specialist contact; rate discount; hardware upgrade. |
 
+*Note: Cohort total: $2,959 + 1,490 + 1,185 = 5,634$ accounts. Total observed churners: $210 + 487 + 798 = 1,495$.*
+
 ![Figure 26: Risk Tier Distribution](figures/26_risk_tier_distribution.png)
 
-### 5.2 Key Operational Insights
+### 5.2 Decoupling of Decision Threshold and Risk Tiers
 
-1. **Low Risk Efficiency**: More than half of all customer accounts ($52.5\%$) fall into the Low Risk tier, where the empirical churn prevalence is only $7.1\%$. Suppressing retention outreach for this cohort protects operating margin from costly wasted promotions.
-2. **High Risk Precision**: Accounts in the High Risk tier demonstrate a **$67.3\%$ observed churn rate** (a $2.5\times$ lift over the population base rate of $26.5\%$). This tier captures over $53.4\%$ of all churners in just $21.0\%$ of the customer base.
-3. **Medium Risk Opportunity**: The Medium Risk cohort ($26.4\%$ of accounts) exhibits an intermediate churn prevalence of $32.7\%$. These subscribers represent the most fertile ground for proactive relationship management before severe dissatisfaction crystalizes.
+A common point of operational confusion is the relationship between the binary decision threshold ($\tau^* = 0.19$) and the risk tier boundaries:
+1. **Functional Decoupling**: The binary decision threshold $\tau^* = 0.19$ is an economic policy cutoff tailored to the specific $5:1$ cost matrix for binary intervention approval. It resides numerically inside the **Low Risk** tier $[0.00, 0.20)$.
+2. **Distinct Governance Objectives**:
+   - Risk tiers partition the customer base into qualitative cohorts for broad lifecycle management and portfolio monitoring.
+   - The decision threshold dictates a specific binary action (e.g. deliver a \$100 discount coupon).
+3. **Cohort Statistics, Not Individual Event Certainty**: The observed churn rates ($7.1\%$, $32.7\%$, $67.3\%$) are retrospective cohort averages computed from cross-sectional IBM Telco historical data. They do not imply a deterministic calendar date of churn for any individual account.
 
 ---
 
 ## 6. Methodological Governance & Operational Guidance
 
-1. **Threshold Is Not Immutable**: The selected threshold $\tau^* = 0.18$ is optimized for a $5:1$ cost ratio. When retention department costs fluctuate (e.g. quarterly promotional budget changes), the threshold must be dynamically adjusted using the sensitivity curve in Section 3.3.
-2. **Probability Tiers vs Thresholds**: Tiers define customer segments for tailored marketing workflows; thresholds define discrete operational actions (e.g. approve vs deny retention concession).
-3. **Retrospective Scope Notice**: Assigning an account to the High Risk tier means its profile closely matches subscribers who churned in the historical snapshot. It does **not prove that the subscriber will cancel on a specific future calendar date**.
+1. **Threshold Is Dynamic, Not Static**: The selected threshold $\tau^* = 0.19$ is tied to the assumed $5:1$ cost ratio ($C_{\text{FN}}=\$500, C_{\text{FP}}=\$100$). When business costs shift (e.g. quarterly promotional budget cuts increase relative $C_{\text{FP}}$), the operational threshold should be dynamically adjusted using the sensitivity curve in Section 3.3.
+2. **Continuous Monitoring Required**: Calibrated probabilities and risk tiers must be tracked over time for cohort drift.
+3. **Retrospective Scope Notice**: Classifying an account as High Risk indicates that its feature profile closely mirrors churned subscribers in the retrospective snapshot. It does not establish causal cancellation drivers or guarantee future churn timing.

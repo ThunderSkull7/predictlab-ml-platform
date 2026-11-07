@@ -1108,8 +1108,8 @@ We analyze classification performance across decision thresholds $\\tau \\in [0.
         nbf.v4.new_code_cell(
             """df_cost = pd.read_csv(exp_dir / "threshold_cost_analysis.csv")
 print(f"Threshold sweep rows: {len(df_cost)} evaluation points")
-display(df_cost[df_cost["threshold"].round(2).isin([0.18, 0.30, 0.50, 0.70])][
-    ["threshold", "precision", "recall", "specificity", "f1", "f2", "balanced_accuracy", "total_cost", "cost_savings_vs_default"]
+display(df_cost[df_cost["threshold"].round(2).isin([0.18, 0.19, 0.30, 0.50, 0.70])][
+    ["threshold", "precision", "recall", "specificity", "f1", "f2", "balanced_accuracy", "total_cost", "cost_savings_vs_default", "savings_pct_vs_default"]
 ])"""
         )
     )
@@ -1138,10 +1138,14 @@ display(Image(filename=str(figures_dir / "25_cost_curve_and_sensitivity.png")))"
     nb.cells.append(
         nbf.v4.new_markdown_cell(
             """### Threshold Analysis Findings
-- At the standard threshold ($\\tau = 0.50$), precision is $0.656$ and recall is $0.523$, resulting in 713 missed churners in the training set.
-- Under a realistic retention cost ratio of $5:1$ ($C_{\\text{FN}}=\\$500, C_{\\text{FP}}=\\$100$), the cost-optimal threshold shifts to $\\tau^* = 0.18$.
-- At $\\tau^* = 0.18$, recall increases to $88.1\\%$, reducing missed churners from 713 to 178 ($75\\%$ reduction in churn leakage), yielding a **38.2% expected cost reduction** relative to the naive 0.50 threshold.
-- Nested out-of-fold cross-validation confirmed minimal threshold selection optimism (optimism delta on F1: $+0.0022$), validating policy generalization."""
+- At the standard threshold ($\\tau = 0.50$), precision is $0.6734$ and recall is $0.5338$, resulting in 697 missed churners in the training cohort.
+- **Comprehensive Incentive Cost Model** ($C_{\\text{FN}}=\\$500, C_{\\text{FP}}=\\$100, C_{\\text{TP}}=\\$100, C_{\\text{TN}}=\\$0$):
+  - Cost-optimal threshold shifts to **$\\tau^* = 0.19$**, lifting recall to **$87.29\\%$**, cutting missed churners from 697 to 190 ($72.74\\%$ reduction), and delivering a **20.75% cost reduction** ($\1$96,900 saved, from $\\$467,000$ to $\\$370,100$).
+- **Misclassification-Only Cost Model** ($C_{\\text{FN}}=\\$500, C_{\\text{FP}}=\\$100, C_{\\text{TP}}=\\$0, C_{\\text{TN}}=\\$0$):
+  - Cost-optimal threshold shifts to **$\\tau^* = 0.18$**, lifting recall to **$88.09\\%$**, cutting missed churners to 178, and delivering a **38.20% cost reduction** ($\1$147,900 saved, from $\\$387,200$ to $\\$239,300$).
+- **Nested Cross-Validation Policy Evaluation**:
+  - Fold thresholds: $[0.21, 0.21, 0.19, 0.19, 0.19]$ (mean $\\tau = 0.1980 \\pm 0.0098$).
+  - Out-of-fold F1 is $0.6159$ vs in-sample $0.6147$ (delta $-0.0012$). This delta quantifies empirical policy stability across CV splits; it confirms threshold selection does not collapse across folds."""
         )
     )
 
@@ -1174,15 +1178,15 @@ display(df_tiers[["risk_tier", "probability_range", "account_count", "percent_of
             """## 5. Global & Local Model Explainability
 
 We interpret the model's decision behavior:
-1. **Global Permutation Importance**: Evaluated on $X_{\\text{train}}$ with 10 random shuffles using Average Precision as the scoring metric.
-2. **Local TreeSHAP Attribution**: Exact Shapley values calculated on the margin log-odds scale from the underlying tree ensemble, attributing positive and negative churn contributions."""
+1. **Cross-Validated Permutation Importance**: Evaluated via 5-fold cross-validation strictly on held-out validation splits with 5 random shuffles using Average Precision drop as the evaluation metric.
+2. **Local Multi-Estimator TreeSHAP Attribution**: Exact Shapley values calculated by aggregating across all 5 ensemble tree estimators on the ensemble decision margin log-odds scale, attributing positive (churn-elevating) and negative (retention-stabilizing) contributions."""
         )
     )
 
     nb.cells.append(
         nbf.v4.new_code_cell(
             """df_perm = pd.read_csv(exp_dir / "permutation_importance_detailed.csv")
-print("Top 10 Global Features by Permutation Importance (PR-AUC drop):")
+print("Top 10 Global Features by Cross-Validated Permutation Importance (PR-AUC drop):")
 display(df_perm.head(10)[["rank", "clean_feature", "importance_mean", "importance_std", "normalized_importance"]])"""
         )
     )
@@ -1197,9 +1201,9 @@ display(Image(filename=str(figures_dir / "28_shap_local_waterfall.png")))"""
     nb.cells.append(
         nbf.v4.new_markdown_cell(
             """### Explainability & Non-Causal Interpretation
-- The strongest global churn risk indicators are **Contract type** (month-to-month contracts strongly associated with churn), **MonthlyCharges**, **tenure**, and lack of **TechSupport** / **OnlineSecurity**.
-- **Collinear Feature Dilution**: Correlated features (such as `tenure` and `TotalCharges`, or `MonthlyCharges` and streaming services) share importance. Permutation importance assesses predictive utility within the model, not independent causal influence.
-- **Local SHAP Waterfalls**: Break down the specific log-odds shifts from the base rate ($E[f(x)] \\approx -1.02$) to the customer's predicted margin. Positive SHAP values indicate attributes elevating risk; negative values indicate stabilizing/retention attributes."""
+- The strongest global churn risk indicators are **Contract type** (month-to-month contracts strongly associated with churn), **tenure**, **Fiber optic internet**, **TotalCharges**, **MonthlyCharges**, and lack of **OnlineSecurity** / **TechSupport**.
+- **Collinear Feature Dilution**: Correlated features (such as `tenure` and `TotalCharges`, or `MonthlyCharges` and streaming services) share importance. Permutation importance assesses predictive reliance within the model, not independent causal influence.
+- **Local SHAP Waterfalls**: Break down the specific log-odds shifts from the ensemble mean base rate ($\\bar{E}[f(x)] \\approx -1.5438$) to the customer's predicted decision margin. Positive SHAP values indicate attributes elevating risk; negative values indicate stabilizing/retention attributes. Exact mathematical additivity holds across the 5 ensemble estimators."""
         )
     )
 

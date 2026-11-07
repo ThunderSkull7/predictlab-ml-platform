@@ -1,48 +1,48 @@
 feature,clean_feature,importance_mean,importance_std,normalized_importance,rank
-cat__Contract_Month-to-month,Contract_Month-to-month,0.13006,0.0082,0.26693,1
-num__tenure,tenure,0.09916,0.00755,0.20351,2
-num__MonthlyCharges,MonthlyCharges,0.0488,0.00479,0.10016,3
-num__TotalCharges,TotalCharges,0.04082,0.0043,0.08377,4
-cat__InternetService_Fiber optic,InternetService_Fiber optic,0.03493,0.00623,0.07168,5
-cat__OnlineSecurity_No,OnlineSecurity_No,0.02454,0.00341,0.05037,6
-cat__TechSupport_No,TechSupport_No,0.02044,0.00285,0.04194,7
-cat__MultipleLines_No,MultipleLines_No,0.01826,0.0016,0.03748,8
-cat__PaymentMethod_Electronic check,PaymentMethod_Electronic check,0.01448,0.00164,0.02971,9
-cat__Contract_Two year,Contract_Two year,0.01309,0.00373,0.02687,10
-cat__PaperlessBilling_No,PaperlessBilling_No,0.01299,0.00129,0.02665,11
-cat__OnlineBackup_No,OnlineBackup_No,0.00376,0.00078,0.00773,12
-cat__gender_Female,gender_Female,0.00362,0.00068,0.00742,13
-cat__SeniorCitizen_0,SeniorCitizen_0,0.0028,0.0006,0.00574,14
-cat__StreamingMovies_No,StreamingMovies_No,0.00275,0.00054,0.00565,15
-cat__StreamingTV_No,StreamingTV_No,0.00248,0.00067,0.00509,16
-cat__StreamingMovies_Yes,StreamingMovies_Yes,0.00221,0.00015,0.00454,17
-cat__Dependents_No,Dependents_No,0.00206,0.00099,0.00424,18
-cat__Contract_One year,Contract_One year,0.00156,0.00018,0.00319,19
-cat__PaperlessBilling_Yes,PaperlessBilling_Yes,0.00154,0.00064,0.00316,20
-num__OptionalServiceCount,OptionalServiceCount,0.00138,0.00065,0.00283,21
-cat__DeviceProtection_Yes,DeviceProtection_Yes,0.00107,0.0002,0.00219,22
-cat__TechSupport_Yes,TechSupport_Yes,0.00073,0.00026,0.00149,23
-cat__Dependents_Yes,Dependents_Yes,0.00058,0.00053,0.00119,24
-cat__MultipleLines_Yes,MultipleLines_Yes,0.00047,0.00011,0.00097,25
-cat__OnlineBackup_Yes,OnlineBackup_Yes,0.00046,0.00015,0.00094,26
-cat__InternetService_DSL,InternetService_DSL,0.00045,0.00082,0.00092,27
-cat__gender_Male,gender_Male,0.00044,5e-05,0.0009,28
-cat__PhoneService_No,PhoneService_No,0.00042,6e-05,0.00086,29
-cat__StreamingTV_Yes,StreamingTV_Yes,0.00029,7e-05,0.0006,30
-cat__PaymentMethod_Mailed check,PaymentMethod_Mailed check,0.00017,5e-05,0.00036,31
-cat__SeniorCitizen_1,SeniorCitizen_1,0.00013,3e-05,0.00027,32
-cat__PaymentMethod_Bank transfer (automatic),PaymentMethod_Bank transfer (automatic),0.00011,3e-05,0.00023,33
-cat__Partner_No,Partner_No,8e-05,6e-05,0.00016,34
-cat__PhoneService_Yes,PhoneService_Yes,7e-05,2e-05,0.00015,35
-cat__Partner_Yes,Partner_Yes,3e-05,1e-05,7e-05,36
-cat__DeviceProtection_No,DeviceProtection_No,2e-05,1e-05,4e-05,37
-cat__OnlineSecurity_No internet service,OnlineSecurity_No internet service,0.0,0.0,0.0,38
-cat__InternetService_No,InternetService_No,0.0,0.0,0.0,39
-cat__MultipleLines_No phone service,MultipleLines_No phone service,0.0,0.0,0.0,40
-cat__TechSupport_No internet service,TechSupport_No internet service,0.0,0.0,0.0,41
-cat__OnlineBackup_No internet service,OnlineBackup_No internet service,0.0,0.0,0.0,42
-cat__DeviceProtection_No internet service,DeviceProtection_No internet service,0.0,0.0,0.0,43
-cat__StreamingMovies_No internet service,StreamingMovies_No internet service,0.0,0.0,0.0,44
-cat__StreamingTV_No internet service,StreamingTV_No internet service,0.0,0.0,0.0,45
-cat__PaymentMethod_Credit card (automatic),PaymentMethod_Credit card (automatic),0.0,0.0,0.0,46
-cat__OnlineSecurity_Yes,OnlineSecurity_Yes,-0.0001,0.00023,0.0,47
+cat__Contract_Month-to-month,Contract_Month-to-month,0.10755,0.02866,0.31449,1
+num__tenure,tenure,0.08054,0.02471,0.2355,2
+cat__InternetService_Fiber optic,InternetService_Fiber optic,0.03132,0.01563,0.09158,3
+num__TotalCharges,TotalCharges,0.02777,0.00991,0.08119,4
+num__MonthlyCharges,MonthlyCharges,0.02607,0.01363,0.07621,5
+cat__OnlineSecurity_No,OnlineSecurity_No,0.01573,0.01295,0.046,6
+cat__MultipleLines_No,MultipleLines_No,0.01174,0.00736,0.03433,7
+cat__TechSupport_No,TechSupport_No,0.01103,0.01009,0.03224,8
+cat__Contract_Two year,Contract_Two year,0.01002,0.00817,0.0293,9
+cat__PaperlessBilling_No,PaperlessBilling_No,0.00794,0.00609,0.02322,10
+cat__PaymentMethod_Electronic check,PaymentMethod_Electronic check,0.00468,0.00562,0.01367,11
+cat__SeniorCitizen_0,SeniorCitizen_0,0.0018,0.00224,0.00527,12
+cat__Dependents_No,Dependents_No,0.00107,0.00269,0.00312,13
+cat__PaperlessBilling_Yes,PaperlessBilling_Yes,0.00102,0.00219,0.00299,14
+cat__InternetService_DSL,InternetService_DSL,0.00089,0.00211,0.00261,15
+cat__StreamingMovies_Yes,StreamingMovies_Yes,0.0006,0.00148,0.00175,16
+num__OptionalServiceCount,OptionalServiceCount,0.00058,0.00102,0.0017,17
+cat__MultipleLines_Yes,MultipleLines_Yes,0.00045,0.00153,0.0013,18
+cat__StreamingTV_Yes,StreamingTV_Yes,0.00028,0.00114,0.00081,19
+cat__OnlineBackup_No,OnlineBackup_No,0.00019,0.00285,0.00054,20
+cat__Contract_One year,Contract_One year,0.00018,0.00093,0.00051,21
+cat__StreamingTV_No,StreamingTV_No,0.00016,0.00158,0.00047,22
+cat__Dependents_Yes,Dependents_Yes,0.00014,0.00076,0.00041,23
+cat__StreamingMovies_No,StreamingMovies_No,0.00012,0.00212,0.00035,24
+cat__PaymentMethod_Mailed check,PaymentMethod_Mailed check,4e-05,0.00037,0.00013,25
+cat__TechSupport_Yes,TechSupport_Yes,3e-05,0.00021,9e-05,26
+cat__DeviceProtection_No,DeviceProtection_No,3e-05,0.00062,8e-05,27
+cat__gender_Female,gender_Female,2e-05,0.00131,6e-05,28
+cat__SeniorCitizen_1,SeniorCitizen_1,2e-05,0.00025,5e-05,29
+cat__OnlineBackup_No internet service,OnlineBackup_No internet service,0.0,0.0,0.0,30
+cat__MultipleLines_No phone service,MultipleLines_No phone service,0.0,0.0,0.0,31
+cat__StreamingMovies_No internet service,StreamingMovies_No internet service,0.0,0.0,0.0,32
+cat__StreamingTV_No internet service,StreamingTV_No internet service,0.0,0.0,0.0,33
+cat__DeviceProtection_No internet service,DeviceProtection_No internet service,0.0,0.0,0.0,34
+cat__TechSupport_No internet service,TechSupport_No internet service,0.0,0.0,0.0,35
+cat__OnlineSecurity_No internet service,OnlineSecurity_No internet service,0.0,0.0,0.0,36
+cat__InternetService_No,InternetService_No,0.0,0.0,0.0,37
+cat__OnlineSecurity_Yes,OnlineSecurity_Yes,-1e-05,0.00054,0.0,38
+cat__Partner_Yes,Partner_Yes,-4e-05,0.00019,0.0,39
+cat__PaymentMethod_Credit card (automatic),PaymentMethod_Credit card (automatic),-4e-05,0.00085,0.0,40
+cat__PaymentMethod_Bank transfer (automatic),PaymentMethod_Bank transfer (automatic),-5e-05,0.00031,0.0,41
+cat__PhoneService_Yes,PhoneService_Yes,-8e-05,0.00017,0.0,42
+cat__PhoneService_No,PhoneService_No,-9e-05,0.00065,0.0,43
+cat__DeviceProtection_Yes,DeviceProtection_Yes,-0.0001,0.00013,0.0,44
+cat__OnlineBackup_Yes,OnlineBackup_Yes,-0.00014,0.00057,0.0,45
+cat__gender_Male,gender_Male,-0.00016,0.00038,0.0,46
+cat__Partner_No,Partner_No,-0.00038,0.00079,0.0,47

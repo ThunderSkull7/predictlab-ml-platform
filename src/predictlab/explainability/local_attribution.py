@@ -25,20 +25,25 @@ class CustomerLocalExplanation(BaseModel):
     """Structured local explanation for an individual customer prediction."""
 
     raw_input_features: dict[str, Any] = Field(description="Original customer input record")
-    model_estimated_probability: float = Field(description="Model-estimated churn probability")
+    model_estimated_probability: float = Field(description="Model-estimated calibrated churn probability")
     applied_threshold: float = Field(description="Applied classification decision threshold")
     predicted_class: int = Field(description="Binary prediction: 1 (Churned) or 0 (Retained)")
     predicted_label: str = Field(description="'Churned' or 'Retained'")
-    base_value_margin: float = Field(description="Expected model margin (base value in log-odds)")
-    model_output_margin: float = Field(description="Sum of base value and all SHAP values (log-odds)")
-    top_churn_drivers: list[FeatureAttribution] = Field(description="Top features increasing churn probability")
-    top_retention_drivers: list[FeatureAttribution] = Field(description="Top features decreasing churn probability")
+    explained_target: str = Field(
+        default="ensemble_base_decision_margin",
+        description="Target function explained (e.g. 'ensemble_base_decision_margin' or 'base_estimator_decision_margin')",
+    )
+    ensemble_size: int = Field(default=1, description="Number of base tree estimators aggregated for the explanation")
+    base_value_margin: float = Field(description="Expected ensemble decision margin (base value in log-odds)")
+    model_output_margin: float = Field(description="Sum of base value and all SHAP values (log-odds ensemble margin)")
+    top_churn_drivers: list[FeatureAttribution] = Field(description="Top features increasing churn margin")
+    top_retention_drivers: list[FeatureAttribution] = Field(description="Top features decreasing churn margin")
     all_attributions: list[FeatureAttribution] = Field(description="Complete list of all feature contributions")
     methodological_limitations: str = Field(description="Scientific interpretation boundaries")
 
 
 class TreeShapExplainer:
-    """Provides local Shapley additive explanations for the fitted tree pipeline."""
+    """Provides local Shapley additive explanations for the fitted tree pipeline or calibrated ensemble."""
 
     def __init__(
         self,
@@ -57,28 +62,27 @@ class TreeShapExplainer:
         import shap
 
         self._fitted_model = fitted_model
+        self._explainers: list[shap.TreeExplainer] = []
 
-        # Extract preprocessor and core tree estimator
+        # Extract preprocessor and core tree estimator(s)
         if hasattr(fitted_model, "named_steps"):
             self._preprocessor = fitted_model.named_steps["preprocessor"]
-            self._classifier = fitted_model.named_steps["classifier"]
+            classifier = fitted_model.named_steps["classifier"]
+            self._explainers = [shap.TreeExplainer(classifier)]
             self._is_calibrated_cv = False
+            self._explained_target = "base_estimator_decision_margin"
         elif hasattr(fitted_model, "calibrated_classifiers_"):
-            # CalibratedClassifierCV wrapping pipeline
-            sub_clf = fitted_model.calibrated_classifiers_[0]
-            if hasattr(sub_clf, "estimator") and hasattr(sub_clf.estimator, "named_steps"):
-                self._preprocessor = sub_clf.estimator.named_steps["preprocessor"]
-                self._classifier = sub_clf.estimator.named_steps["classifier"]
-            else:
-                base_pipe = fitted_model.estimator
-                self._preprocessor = base_pipe.named_steps["preprocessor"]
-                self._classifier = base_pipe.named_steps["classifier"]
+            # CalibratedClassifierCV wrapping pipeline ensemble
+            sub_clfs = list(fitted_model.calibrated_classifiers_)
+            self._preprocessor = sub_clfs[0].estimator.named_steps["preprocessor"]
+            self._explainers = [
+                shap.TreeExplainer(sub.estimator.named_steps["classifier"])
+                for sub in sub_clfs
+            ]
             self._is_calibrated_cv = True
+            self._explained_target = "ensemble_base_decision_margin"
         else:
             raise ValueError(f"Unsupported model object structure: {type(fitted_model)}")
-
-        # Initialize SHAP TreeExplainer on tree estimator
-        self._explainer = shap.TreeExplainer(self._classifier)
 
         if feature_names is not None:
             self._feature_names = list(feature_names)
@@ -119,17 +123,18 @@ class TreeShapExplainer:
             df_in = raw_record.copy().iloc[:1]
             raw_dict = df_in.iloc[0].to_dict()
 
-        # Compute model-estimated probability
+        # Compute model-estimated calibrated probability
         proba = float(self._fitted_model.predict_proba(df_in)[0, 1])
         pred_class = int(proba >= threshold)
         pred_label = "Churned" if pred_class == 1 else "Retained"
 
         # Transform features
         X_trans = self._preprocessor.transform(df_in)
-        shap_res = self._explainer(X_trans)
 
-        shap_vals = shap_res.values[0]
-        base_val = float(shap_res.base_values[0])
+        # Compute Shapley values across all estimators in the ensemble and average
+        shap_res_list = [expl(X_trans) for expl in self._explainers]
+        shap_vals = np.mean([r.values[0] for r in shap_res_list], axis=0)
+        base_val = float(np.mean([r.base_values[0] for r in shap_res_list]))
         model_margin = float(base_val + np.sum(shap_vals))
 
         attributions: list[FeatureAttribution] = []
@@ -159,10 +164,15 @@ class TreeShapExplainer:
         )[:top_n]
 
         limitations = (
-            "Local Shapley attributions allocate credit across features for the model's "
-            "predicted log-odds margin relative to the expected training baseline. "
-            "They quantify model behavior, NOT causal real-world intervention outcomes. "
-            "Changing an input feature in reality may not alter churn propensity as estimated."
+            f"Local Shapley attributions explain the {self._explained_target} "
+            f"(aggregated across {len(self._explainers)} ensemble estimators) on the uncalibrated "
+            "log-odds scale relative to the expected training baseline. "
+            "Additivity holds strictly on this margin scale (output_margin = base_value + sum(shap_values)). "
+            "Because Platt sigmoid calibration is non-linear, Shapley values do NOT additively sum to "
+            "the final calibrated probability. "
+            "Furthermore, Shapley values quantify statistical model behavior on observational data, "
+            "NOT causal intervention outcomes. Changing a feature in reality will not causally alter "
+            "churn propensity as estimated."
         )
 
         return CustomerLocalExplanation(
@@ -171,6 +181,8 @@ class TreeShapExplainer:
             applied_threshold=round(threshold, 4),
             predicted_class=pred_class,
             predicted_label=pred_label,
+            explained_target=self._explained_target,
+            ensemble_size=len(self._explainers),
             base_value_margin=round(base_val, 4),
             model_output_margin=round(model_margin, 4),
             top_churn_drivers=pos_drivers,
