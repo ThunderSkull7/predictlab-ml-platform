@@ -13,7 +13,7 @@ Phase 5 delivers [`InferenceEngine`](file:///d:/Project/Predictive%20Analytics%2
 - **Dual Batch Error Handling Modes**: Supports both `atomic` mode (transactional validation where any single error rejects the batch) and `per_record` mode (graceful degradation where valid records are scored and invalid records return localized diagnostics).
 - **Deterministic Calibrated Inference**: Loads the serialized Phase 5 calibrated artifact (`model_phase5_calibrated.joblib`), applying the cost-optimal decision threshold ($\tau^* = 0.19$) and contiguous risk tiering.
 - **Integrated Local TreeSHAP Explanations**: Seamlessly generates local feature attributions on demand across the 5-fold ensemble, identifying top churn and retention drivers without external script dependencies.
-- **Empirical Latency Benchmarking**: Rigorously benchmarked across single-record and batch workloads on standard production hardware, demonstrating high-throughput batch processing at **$0.121$ ms per record**.
+- **Empirical Latency Benchmarking**: Rigorously benchmarked across single-record and batch workloads on local hardware, demonstrating high-throughput batch processing at **$0.096$ ms per record** ($~10,398$ rec/s).
 
 > [!IMPORTANT]
 > **Cross-Sectional Scope Limitation**: The dataset is a cross-sectional snapshot of customer accounts at a single observation point. All model evaluations represent retrospective classification and risk ranking across subscriber accounts, **not temporal forecasting or forward-looking event prediction**.
@@ -191,27 +191,53 @@ print(f"Failed: {batch_result.failed_predictions}")
 
 ## 5. Inference Latency & Throughput Benchmark
 
-To establish reproducible production performance characteristics, we benchmarked the inference engine across multiple operational workloads on the host platform.
+To establish reproducible production performance characteristics, we benchmarked the inference engine across multiple operational workloads on the host platform using the dedicated benchmarking harness in [`scripts/benchmark_inference.py`](file:///d:/Project/Predictive%20Analytics%20Platform/scripts/benchmark_inference.py). Raw benchmark distributions are preserved in [`reports/experiments/inference_benchmarks.json`](file:///d:/Project/Predictive%20Analytics%20Platform/reports/experiments/inference_benchmarks.json).
 
 ### 5.1 Benchmark Hardware & Runtime Environment
-- **Operating System**: Microsoft Windows 11 Enterprise (x86_64)
-- **Runtime**: Python 3.12.10 (64-bit)
-- **Key Libraries**: scikit-learn 1.6.1, pydantic 2.12.5, pandas 2.2.3, numpy 2.2.3
-- **Artifact Tested**: `artifacts/model_phase5_calibrated.joblib` (5-fold ensemble of HistGradientBoosting pipelines)
+- **CPU Model**: `13th Gen Intel(R) Core(TM) i5-13450HX` (10 cores [6 Performance cores up to 4.6 GHz, 4 Efficient cores up to 3.4 GHz], 16 logical threads)
+- **Host Memory**: `15.69 GB` total physical RAM (`3.58 GB` available at test execution)
+- **Operating System**: `Microsoft Windows 11 Enterprise` (Build 10.0.26300, 64-bit architecture)
+- **Runtime Environment**: `Python 3.12.10` (64-bit)
+- **Key Library Versions**: `scikit-learn 1.6.1`, `pydantic 2.13.4`, `pandas 2.3.1`, `numpy 2.3.2`, `psutil 7.0.0`
+- **Model Artifact Evaluated**: `artifacts/model_phase5_calibrated.joblib` (5-fold ensemble of HistGradientBoosting pipelines with 5 Sigmoid calibrators)
 
-### 5.2 Latency Results Across Execution Modes
+### 5.2 Benchmarking Methodology & Measurement Boundaries
+- **Timing Primitive**: `time.perf_counter()` (monotonic high-resolution timer with sub-microsecond precision).
+- **Warm-Up Procedure**: 5 unmeasured warm-up iterations executed for each mode prior to recording measurements to prime Python bytecode compilation, OS thread pools, and NumPy memory buffers.
+- **Repetition Counts**:
+  - 50 repetitions for single-record request scoring (no SHAP).
+  - 20 repetitions for single-record request scoring with 5-estimator TreeSHAP explanations.
+  - 30 repetitions for batch scoring of 100 customer records.
+  - 30 repetitions for batch scoring of 1,000 customer records.
+- **Pipeline Measurement Scope**:
+  - **Single-Record Mode**: Begins at dictionary ingestion; includes Pydantic schema validation (`CustomerInputRecord`), DataFrame assembly, ColumnTransformer preprocessing, 5-fold ensemble scoring (`predict_proba` averaging), risk tier assignment, and `SinglePredictionOutput` serialization.
+  - **Single-Record Mode with SHAP**: Includes all single-record steps plus TreeSHAP margin attribution traversal across all 5 ensemble tree estimators, additivity checks, and `CustomerLocalExplanation` packaging.
+  - **Batch Mode**: Includes batch validation, atomic/per-record checking, vectorized DataFrame preprocessing, 5-fold ensemble probability estimation, risk tier assignment, and `BatchPredictionOutput` packaging.
+- **Statistical Aggregation**:
+  - Median = 50th percentile of measured execution times.
+  - P95 = 95th percentile; P99 = 99th percentile.
+  - Throughput = `batch_size / (median_batch_latency_seconds)`.
 
-| Workload Mode | Batch Size | Explanations Enabled | Median Latency (per record) | Mean Latency (per record) | 95th Percentile Latency | 99th Percentile Latency | Throughput (records / sec) |
-|---|---|---|---|---|---|---|---|
-| **Vectorized Batch** | 1,000 records | No | **0.121 ms** ($121 \ \mu\text{s}$) | 0.123 ms | 0.134 ms | 0.138 ms | **~8,260 rec/s** |
-| **Vectorized Batch** | 100 records | No | **0.135 ms** ($135 \ \mu\text{s}$) | 0.138 ms | 0.152 ms | 0.165 ms | **~7,400 rec/s** |
-| **Single Record Sequential** | 1 record | No | **52.8 ms** | 53.4 ms | 56.1 ms | 58.7 ms | ~19 rec/s |
-| **Single Record Sequential** | 1 record | **Yes (5-Tree TreeSHAP)** | **119.9 ms** | 121.2 ms | 128.5 ms | 134.0 ms | ~8.3 rec/s |
+### 5.3 Latency Results Across Execution Modes
 
-### 5.3 Performance Engineering Analysis
-1. **Vectorized Scaling**: In batch scoring, schema validation and feature transformation execute via vectorized NumPy/Pandas pipelines. The 5-fold ensemble executes concurrently across threads, delivering a sub-millisecond per-record latency ($0.121$ ms), suitable for scoring millions of accounts in routine nocturnal batch runs.
-2. **Single-Record Overhead**: In single-record scoring, execution time is dominated by Python dictionary instantiation, DataFrame construction, and Pydantic object deserialization. For real-time REST API microservices, scoring latency remains comfortably below standard $100$ ms SLA thresholds.
-3. **TreeSHAP Attribution Cost**: Computing TreeSHAP values adds $\approx 67$ ms per record because the explainer traverses tree split structures across all 5 ensemble estimators. This overhead is well within interactive application limits for targeted customer care screens.
+The table below contrasts both **Total Batch Latency** and **Normalized Per-Record Latency**:
+
+| Workload Mode | Batch Size | Repeats | Explanations Enabled | Total Latency (Median) | Total Latency (Mean) | Total Latency (P95) | Total Latency (P99) | Normalized Per-Record (Median) | Normalized Per-Record (Mean) | Throughput (records / sec) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| **Vectorized Batch** | 1,000 | 30 | No | **96.17 ms** | 101.71 ms | 122.60 ms | 140.00 ms | **0.0962 ms** ($96.2 \ \mu\text{s}$) | 0.1017 ms | **~10,398.5 rec/s** |
+| **Vectorized Batch** | 100 | 30 | No | **52.69 ms** | 54.85 ms | 68.26 ms | 76.21 ms | **0.5269 ms** ($526.9 \ \mu\text{s}$) | 0.5485 ms | **~1,897.8 rec/s** |
+| **Single Record** | 1 | 50 | No | **47.65 ms** | 49.02 ms | 59.07 ms | 67.23 ms | **47.65 ms** | 49.02 ms | **~21.0 req/s** |
+| **Single Record** | 1 | 20 | **Yes (5-Tree SHAP)** | **118.69 ms** | 118.35 ms | 135.39 ms | 146.22 ms | **118.69 ms** | 118.35 ms | **~8.4 req/s** |
+
+> [!IMPORTANT]
+> **Batch Latency vs Request Latency Equivalence Warning**:
+> Normalized batch latency ($0.0962$ ms per record) measures amortized execution speed when hundreds or thousands of records are processed concurrently via vectorized C extensions and multithreaded tree scoring.
+> **Normalized batch latency must NOT be confused with single-record request latency** ($47.65$ ms). In single-record scoring, per-request overhead (Python dictionary unpacking, Pydantic field-by-field validation, DataFrame allocation, and single-row matrix transformation) represents over $90\%$ of total wall-clock time.
+
+### 5.4 Performance Engineering Analysis
+1. **Vectorized Scaling in Bulk Operations**: Batch scoring achieves over $10,000$ records per second on a single machine. The ColumnTransformer and underlying HistGradientBoosting C extensions scale efficiently, making nightly batch scoring of millions of subscribers feasible in under 2 minutes.
+2. **Interactive Real-Time Service**: Single-record scoring completes in $\approx 47.7$ ms (P95 = $59.1$ ms). For real-time REST API endpoints or CRM customer-care lookups, response latency remains comfortably within standard interactive SLAs ($< 100$ ms).
+3. **Local TreeSHAP Overhead**: Generating local SHAP explanations adds $\approx 71.0$ ms per record, bringing total response time to $\approx 118.7$ ms. Because `TreeShapExplainer` averages attributions across all 5 ensemble tree estimators, this cost scales linearly with ensemble size. SHAP generation is recommended on-demand for high-risk accounts rather than universally across bulk batches.
 
 ---
 
@@ -239,5 +265,5 @@ All tests execute cleanly as part of the 126-test suite in `pytest`.
 1. **Model Persistence**: Production artifact serialized to `artifacts/model_phase5_calibrated.joblib`.
 2. **Schema Invariance**: Fully validated Pydantic models decouple raw external client inputs from internal scikit-learn numpy arrays.
 3. **Reproducibility**: Global deterministic seeds and fixed preprocessors ensure identical scoring across repeated invocations.
-4. **Latency Certified**: Vectorized batch throughput verified at $>8,000$ records/sec; real-time single-record scoring under $55$ ms.
+4. **Empirically Benchmarked**: Vectorized batch throughput benchmarked at $>10,000$ records/sec; real-time single-record scoring under $50$ ms.
 5. **Readiness**: The inference engine is ready for deployment in automated batch jobs or real-time web services (Phase 6).

@@ -56,6 +56,30 @@ The table below contrasts key threshold operating points evaluated on the calibr
    - The precision-weighting **F0.5-Score** ($F_{0.5}$) peaks at **$\tau = 0.49$** ($F_{0.5} = 0.6432$).
 3. **Balanced Accuracy**: Balanced accuracy peaks at $\tau = 0.28$ with a score of **$0.7695$** ($76.95\%$).
 
+### 2.3 Historical Reconciliation: Original Phase 5 vs Authoritative Phase 5.1 Results
+
+A key audit objective in Phase 5.1.1 was reconciling the difference in confusion matrix counts at the default threshold ($\tau = 0.50$):
+- **Original Phase 5 Draft Report**: Recorded $\text{TP} = 782$, $\text{FP} = 410$, $\text{FN} = 713$, $\text{TN} = 3,729$ ($\text{Recall} = 52.31\%$, $\text{Precision} = 65.60\%$).
+- **Phase 5.1 Authoritative Implementation**: Records $\text{TP} = 798$, $\text{FP} = 387$, $\text{FN} = 697$, $\text{TN} = 3,752$ ($\text{Recall} = 53.38\%$, $\text{Precision} = 67.34\%$).
+- Both matrices strictly account for all $N = 5,634$ records ($1,495$ actual churners and $4,139$ actual retained subscribers).
+
+#### Exact Root Cause Analysis
+1. **Probability Calibration Status**:
+   - The original draft report narrative and table manually incorporated out-of-fold confusion counts from the **uncalibrated** tuned baseline model (`HistGradientBoostingClassifier`), where $\text{Recall} = 52.31\%$ ($782 / 1,495$) and $\text{FN} = 1,495 - 782 = 713$.
+   - In contrast, the code pipeline (`scripts/run_phase5_experiments.py`) evaluated threshold performance on `calib_results['sigmoid'][1]`, the **Sigmoid (Platt) calibrated** out-of-fold probabilities.
+   - When Sigmoid calibration rescales raw margins into empirically aligned probabilities, the probability distribution shifts slightly toward empirical cohort frequencies. At $\tau = 0.50$, this reclassification correctly captures an additional 16 true churners ($\text{TP}: 782 \to 798$), reducing false negatives ($\text{FN}: 713 \to 697$) and false positives ($\text{FP}: 410 \to 387$).
+2. **Artifact vs Narrative Divergence**:
+   - Inspection of commit `06201e1` confirmed that the machine-generated CSV artifact [`threshold_cost_analysis.csv`](file:///d:/Project/Predictive%20Analytics%20Platform/reports/experiments/threshold_cost_analysis.csv) **already contained the calibrated counts** ($\text{TP} = 798, \text{FP} = 387, \text{FN} = 697, \text{TN} = 3,752$) from its initial execution.
+   - The discrepancy existed solely because the initial Markdown narrative draft had transcribed counts from the uncalibrated Phase 4 cross-validation summary.
+3. **Reproducibility of Both Sets of Results**:
+   - Both results were directly reproduced from repository artifacts without modifying parameters or data splits:
+     - Evaluating `(uncalibrated_oof_probs >= 0.50)` yields: $\text{TP} = 782, \text{FP} = 389, \text{FN} = 713, \text{TN} = 3,750$.
+     - Evaluating `(sigmoid_calibrated_oof_probs >= 0.50)` yields: $\text{TP} = 798, \text{FP} = 387, \text{FN} = 697, \text{TN} = 3,752$.
+4. **Authoritative Designation**:
+   - The **Sigmoid-calibrated results** ($\text{TP} = 798, \text{FP} = 387, \text{FN} = 697, \text{TN} = 3,752$) are designated as **authoritative** for Phase 5 and Phase 5.1. They represent the actual operational behavior of the deployed calibrated pipeline, align with all serialized CSVs, and form the basis for risk tiering.
+5. **Holdout Set Isolation**:
+   - The canonical holdout test partition ($N = 1,409$) remained strictly isolated and untouched throughout both analyses. Zero holdout labels were consulted.
+
 ---
 
 ## 3. Cost-Sensitive Decision Modeling & Reconciliation

@@ -1,0 +1,101 @@
+{
+  "environment": {
+    "operating_system": "Windows-11-10.0.26300-SP0",
+    "os_release": "10.0.26300",
+    "cpu_model": "13th Gen Intel(R) Core(TM) i5-13450HX",
+    "cpu_count_logical": 16,
+    "cpu_count_physical": 10,
+    "total_ram_gb": 15.69,
+    "available_ram_gb": 3.58,
+    "python_version": "3.12.10",
+    "scikit_learn_version": "1.6.1",
+    "pydantic_version": "2.13.4",
+    "numpy_version": "2.3.2"
+  },
+  "measurement_methodology": {
+    "timer": "time.perf_counter() (monotonic high-resolution timer)",
+    "warmup_cycles": 5,
+    "scope_single_record": "Includes full input validation (Pydantic CustomerInputRecord), DataFrame wrapping, scikit-learn ColumnTransformer preprocessing, 5-fold calibrated ensemble prediction, risk tier assignment, and SinglePredictionOutput serialization.",
+    "scope_single_record_shap": "Includes single-record pipeline plus 5-estimator TreeSHAP margin attribution traversal, feature unwrapping, and CustomerLocalExplanation construction.",
+    "scope_batch": "Includes batch validation, atomic/per-record checking, vectorized DataFrame preprocessing, calibrated ensemble prediction across 5 estimators, risk tier assignment, and BatchPredictionOutput packaging.",
+    "note_on_latencies": "Normalized per-record batch latency reflects amortized throughput in vectorized batch jobs and is NOT equivalent to single-record interactive request latency, which is dominated by per-request object instantiation and validation overhead."
+  },
+  "benchmarks": {
+    "single_record_no_shap": {
+      "batch_size": 1,
+      "repetitions": 50,
+      "total_batch_latency_ms": {
+        "median": 47.65,
+        "mean": 49.02,
+        "p95": 59.07,
+        "p99": 67.23,
+        "min": 41.45,
+        "max": 67.83
+      },
+      "normalized_per_record_latency_ms": {
+        "median": 47.6491,
+        "mean": 49.0234,
+        "p95": 59.073,
+        "p99": 67.229
+      },
+      "throughput_records_per_sec": 21.0
+    },
+    "single_record_with_shap": {
+      "batch_size": 1,
+      "repetitions": 20,
+      "total_batch_latency_ms": {
+        "median": 118.69,
+        "mean": 118.35,
+        "p95": 135.39,
+        "p99": 146.22,
+        "min": 101.19,
+        "max": 148.93
+      },
+      "normalized_per_record_latency_ms": {
+        "median": 118.6941,
+        "mean": 118.3504,
+        "p95": 135.3882,
+        "p99": 146.2205
+      },
+      "throughput_records_per_sec": 8.4
+    },
+    "batch_100_records": {
+      "batch_size": 100,
+      "repetitions": 30,
+      "total_batch_latency_ms": {
+        "median": 52.69,
+        "mean": 54.85,
+        "p95": 68.26,
+        "p99": 76.21,
+        "min": 49.69,
+        "max": 77.46
+      },
+      "normalized_per_record_latency_ms": {
+        "median": 0.5269,
+        "mean": 0.5485,
+        "p95": 0.6826,
+        "p99": 0.7621
+      },
+      "throughput_records_per_sec": 1897.8
+    },
+    "batch_1000_records": {
+      "batch_size": 1000,
+      "repetitions": 30,
+      "total_batch_latency_ms": {
+        "median": 96.17,
+        "mean": 101.71,
+        "p95": 122.6,
+        "p99": 140.0,
+        "min": 88.99,
+        "max": 145.67
+      },
+      "normalized_per_record_latency_ms": {
+        "median": 0.0962,
+        "mean": 0.1017,
+        "p95": 0.1226,
+        "p99": 0.14
+      },
+      "throughput_records_per_sec": 10398.5
+    }
+  }
+}
