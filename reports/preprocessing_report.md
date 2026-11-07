@@ -86,12 +86,26 @@ Implemented in [`clean_total_charges`](file:///d:/Project/Predictive%20Analytics
 - Validates that payment method strings match the canonical schema.
 - Retained as an alternative experimental feature; excluded from default baseline to avoid collinear redundancy with the 4 one-hot payment method columns.
 
-### 4.4 `ChargesRatio` (Experimental Status)
+### 4.4 `ChargesRatio` & `ChargesRatioDefined` (Phase 3.1 Mathematical Validity Correction)
 - **Formula**: $\text{TotalCharges} / (\text{tenure} \times \text{MonthlyCharges})$.
 - **Status**: **Strictly excluded from default baseline**.
-- **Phase 2.1 Audit Findings**: $80.4\%$ of valid accounts have a ratio within $[0.95, 1.05]$ (mean $1.0003$, std $0.0512$). It provides negligible independent variance for stable accounts.
-- **Zero-Tenure Handling**: At $\text{tenure} == 0$, numerator and denominator are both zero. Rather than introducing an arbitrary epsilon ($1e-4$) that causes severe numerical distortion, the transformer explicitly branches: $\text{ChargesRatio} = 1.0 \text{ if tenure} == 0$.
-- **Caveat**: Current `MonthlyCharges` reflects the snapshot rate, not historical rate changes. Available solely in experimental pipeline configurations.
+- **Root Cause & Mathematical Validity**:
+  - In Phase 3, the initial experimental implementation assigned `ChargesRatio = 1.0` when $\text{tenure} == 0$.
+  - This was mathematically invalid: when $\text{tenure} == 0$, both the numerator ($\text{TotalCharges} = 0$) and denominator ($\text{tenure} \times \text{MonthlyCharges} = 0$) evaluate to zero. The expression $0 / 0$ is indeterminate/undefined. Fabricating an artificial value of $1.0$ (or injecting an arbitrary epsilon) falsely implies that newly enrolled customers exhibited historical billing consistency identical to seasoned subscribers.
+- **Corrected Zero-Tenure Handling**:
+  - When $\text{tenure} == 0$, `ChargesRatio` is strictly represented as **`NaN`** (missing value).
+  - Never substitutes $1.0$, an arbitrary epsilon, or fabricated numbers.
+  - Inputs are validated: positive-tenure denominators must be positive, and computed ratios must be finite.
+- **Companion Binary Indicator: `ChargesRatioDefined`**:
+  - A deterministic binary feature derived strictly from predictor columns without target access:
+    - `1`: `ChargesRatio` is mathematically defined ($\text{tenure} > 0$ and $\text{MonthlyCharges} > 0$).
+    - `0`: `ChargesRatio` is undefined ($\text{tenure} == 0$).
+- **Experimental Pipeline Integration**:
+  - In [`create_experimental_preprocessor()`](file:///d:/Project/Predictive%20Analytics%20Platform/src/predictlab/preprocessing/pipelines.py#L180), `ChargesRatio` and `ChargesRatioDefined` are generated prior to numerical imputation.
+  - Undefined zero-tenure ratios remain `NaN` until the numerical imputer (`SimpleImputer(strategy="median")`) inside the column transformer processes them.
+  - Imputation statistics (median $\approx 1.0000$) are learned **strictly from training data**.
+  - Held-out test data is transformed using the already-fitted training median.
+  - `ChargesRatioDefined` remains an explicit separate feature ($0$ for zero tenure, $1$ for positive tenure) and is never overwritten by imputation.
 
 ---
 
@@ -135,7 +149,7 @@ Both baseline preprocessor variants transform the 19 raw predictive features int
 | **Billing & Payment** | 6 | `cat__PaperlessBilling_No`, `cat__PaperlessBilling_Yes`, `cat__PaymentMethod_Bank transfer (automatic)`, `cat__PaymentMethod_Credit card (automatic)`, `cat__PaymentMethod_Electronic check`, `cat__PaymentMethod_Mailed check` |
 | **Total Features** | **47** | Complete feature space across all baseline estimators |
 
-- In the experimental pipeline (`create_experimental_preprocessor`), 4 additional features are generated (`num__ChargesRatio`, `num__AutomaticPayment`, `num__TechnicalProtectionCount`, `num__StreamingEntertainmentCount`), yielding **51 features**.
+- In the experimental pipeline (`create_experimental_preprocessor`), 5 additional features are generated (`num__ChargesRatio`, `num__ChargesRatioDefined`, `num__AutomaticPayment`, `num__TechnicalProtectionCount`, `num__StreamingEntertainmentCount`), yielding **52 features**.
 
 ---
 

@@ -141,39 +141,94 @@ def compute_automatic_payment_flag(
     return flag_series
 
 
+def compute_charges_ratio_defined(
+    df: pd.DataFrame,
+    tenure_col: str = "tenure",
+    monthly_charges_col: str = "MonthlyCharges",
+    output_col: str = "ChargesRatioDefined",
+) -> pd.Series:
+    """Compute deterministic binary indicator for whether ChargesRatio is mathematically defined.
+
+    ChargesRatio = TotalCharges / (tenure * MonthlyCharges) is mathematically undefined when
+    tenure == 0 because both numerator and denominator evaluate to 0 (0 / 0).
+    This function generates:
+    - 1: ChargesRatio is mathematically defined (tenure > 0 and MonthlyCharges > 0).
+    - 0: ChargesRatio is undefined because tenure is 0 (or non-positive denominator).
+
+    This indicator is derived strictly from predictor columns without target access.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input DataFrame.
+    tenure_col : str
+        Tenure column name.
+    monthly_charges_col : str
+        Monthly charges column name.
+    output_col : str
+        Name for generated indicator feature.
+
+    Returns
+    -------
+    pd.Series
+        Binary integer Series (1 if defined, 0 if undefined).
+    """
+    for col in (tenure_col, monthly_charges_col):
+        if col not in df.columns:
+            raise KeyError(f"Required column '{col}' for ChargesRatioDefined not found in DataFrame.")
+
+    tenure = pd.to_numeric(df[tenure_col], errors="coerce")
+    mc = pd.to_numeric(df[monthly_charges_col], errors="coerce")
+
+    # Defined strictly when tenure > 0 and monthly charges > 0
+    is_defined = (tenure > 0) & (mc > 0) & tenure.notna() & mc.notna()
+    indicator = is_defined.astype(int)
+    indicator.name = output_col
+    return indicator
+
+
 def compute_experimental_charges_ratio(
     df: pd.DataFrame,
     total_charges_col: str = "TotalCharges",
     tenure_col: str = "tenure",
     monthly_charges_col: str = "MonthlyCharges",
     output_col: str = "ChargesRatio",
-    zero_tenure_fallback: float = 1.0,
+    validate_finite: bool = True,
 ) -> pd.Series:
-    """Compute the experimental ChargesRatio feature with explicit zero-tenure branching.
+    """Compute the experimental ChargesRatio feature with mathematically valid zero-tenure NaN handling.
 
     NOTE: This feature is strictly experimental and excluded from the default baseline pipeline.
-    It evaluates TotalCharges / (tenure * MonthlyCharges). When tenure == 0, it avoids arbitrary
-    epsilon denominators by explicitly branching to zero_tenure_fallback (default: 1.0).
+    It evaluates TotalCharges / (tenure * MonthlyCharges).
+    When tenure == 0, the ratio is mathematically undefined (0 / 0) and is explicitly represented as NaN.
+    Never substitutes 1.0, an arbitrary epsilon, or another fabricated numeric ratio for zero-tenure records.
 
     Parameters
     ----------
     df : pd.DataFrame
         Input DataFrame.
     total_charges_col : str
-        Total charges column.
+        Total charges column name.
     tenure_col : str
-        Tenure column.
+        Tenure column name.
     monthly_charges_col : str
-        Monthly charges column.
+        Monthly charges column name.
     output_col : str
         Name for generated ratio feature.
-    zero_tenure_fallback : float
-        Value assigned when tenure == 0 (defaults to 1.0).
+    validate_finite : bool
+        Whether to enforce that inputs and non-zero tenure denominators are finite and valid.
 
     Returns
     -------
     pd.Series
-        Numeric Series of computed charge ratios.
+        Float64 Series of computed charge ratios, with NaN at tenure == 0.
+
+    Raises
+    ------
+    KeyError
+        If required columns are absent from DataFrame.
+    ValueError
+        If inputs are non-finite, denominators for positive tenure are non-positive,
+        or computed ratios for positive tenure are non-finite.
     """
     for col in (total_charges_col, tenure_col, monthly_charges_col):
         if col not in df.columns:
@@ -183,23 +238,32 @@ def compute_experimental_charges_ratio(
     tenure = pd.to_numeric(df[tenure_col], errors="coerce")
     mc = pd.to_numeric(df[monthly_charges_col], errors="coerce")
 
-    # Explicit condition without arbitrary epsilon
-    ratio = pd.Series(index=df.index, dtype=np.float64, name=output_col)
+    if validate_finite:
+        # Check for unparseable or inf values in input series for positive tenure
+        pos_mask = tenure > 0
+        if pos_mask.any():
+            for s, name in ((tc, total_charges_col), (tenure, tenure_col), (mc, monthly_charges_col)):
+                if s.loc[pos_mask].isna().any():
+                    raise ValueError(f"Column '{name}' contains non-numeric or NaN values for positive tenure.")
+                if np.isinf(s).any():
+                    raise ValueError(f"Column '{name}' contains non-finite infinite values.")
 
-    # For positive tenure, compute standard ratio
-    positive_mask = tenure > 0
-    expected_charges = tenure * mc
+    ratio = pd.Series(np.nan, index=df.index, dtype=np.float64, name=output_col)
 
-    # Avoid zero division if monthly charges is 0
-    valid_denom_mask = positive_mask & (expected_charges > 0)
-    ratio.loc[valid_denom_mask] = tc.loc[valid_denom_mask] / expected_charges.loc[valid_denom_mask]
+    pos_mask = tenure > 0
+    if pos_mask.any():
+        denom = tenure.loc[pos_mask] * mc.loc[pos_mask]
+        if (denom <= 0).any():
+            raise ValueError("Non-positive denominator encountered for positive tenure.")
 
-    # Explicit handling for tenure == 0
-    zero_tenure_mask = tenure == 0
-    ratio.loc[zero_tenure_mask] = zero_tenure_fallback
+        computed = tc.loc[pos_mask] / denom
+        if not np.isfinite(computed).all():
+            raise ValueError("Calculated ratio contains non-finite values.")
 
-    # Handle remaining non-positive tenure or zero denominator gracefully
-    other_mask = ratio.isna()
-    ratio.loc[other_mask] = zero_tenure_fallback
+        ratio.loc[pos_mask] = computed
+
+    # Zero tenure is explicitly represented as NaN
+    zero_mask = tenure == 0
+    ratio.loc[zero_mask] = np.nan
 
     return ratio

@@ -93,7 +93,7 @@ Phase 3 established formal architectural and programmatic safeguards to guarante
 ### A. Preprocessing Boundary Contracts
 1. **Identifier Exclusion**: `customerID` is strictly removed from feature matrices $X_{\text{train}}$ and $X_{\text{test}}$ prior to pipeline ingestion. A redundant `ColumnDropper` step in the pipeline provides defense-in-depth against accidental leakage.
 2. **Target Isolation**: The target `Churn` is extracted and binary-encoded (`{"No": 0, "Yes": 1}`) before any transformation. The target series $y$ is never passed to feature transformers or column transformers.
-3. **No Target-Derived Features**: All engineered features (`OptionalServiceCount`, `AutomaticPayment`, and experimental `ChargesRatio`) are derived purely from exogenous or operational service features, never using target statistics, out-of-fold target encoding, or label-correlated aggregations.
+3. **No Target-Derived Features**: All engineered features (`OptionalServiceCount`, `AutomaticPayment`, and experimental `ChargesRatio` / `ChargesRatioDefined`) are derived purely from exogenous or operational service features, never using target statistics, out-of-fold target encoding, or label-correlated aggregations. Undefined zero-tenure `ChargesRatio` values remain `NaN` until processed by the training-fitted median imputer, with `ChargesRatioDefined` indicating validity without target access.
 4. **Strict Training-Only Fitting**:
    - `SimpleImputer` medians are calculated exclusively from $X_{\text{train}}$.
    - `StandardScaler` empirical means $\mu$ and standard deviations $\sigma$ are calculated exclusively from $X_{\text{train}}$.

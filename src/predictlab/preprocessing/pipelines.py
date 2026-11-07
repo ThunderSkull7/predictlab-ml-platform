@@ -204,8 +204,14 @@ def create_experimental_preprocessor(
         exp_num_cols.extend(["TechnicalProtectionCount", "StreamingEntertainmentCount"])
 
     if include_charges_ratio:
-        steps.append(("engineer_charges_ratio", ExperimentalChargesRatioTransformer()))
+        steps.append(
+            (
+                "engineer_charges_ratio",
+                ExperimentalChargesRatioTransformer(include_defined_indicator=True),
+            )
+        )
         exp_num_cols.append("ChargesRatio")
+        exp_num_cols.append("ChargesRatioDefined")
 
     exp_cat_cols = list(BASELINE_CATEGORICAL_FEATURES)
     if include_automatic_payment:

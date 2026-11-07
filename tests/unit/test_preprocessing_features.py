@@ -6,6 +6,7 @@ import pytest
 
 from predictlab.preprocessing.feature_engineering import (
     compute_automatic_payment_flag,
+    compute_charges_ratio_defined,
     compute_experimental_charges_ratio,
     compute_optional_service_count,
     compute_streaming_entertainment_count,
@@ -107,20 +108,67 @@ def test_automatic_payment_raises_on_invalid_method() -> None:
 
 
 def test_experimental_charges_ratio(service_sample_df: pd.DataFrame) -> None:
-    """Test ChargesRatio calculation and explicit zero-tenure fallback."""
+    """Test ChargesRatio calculation and mathematically valid zero-tenure NaN representation."""
     ratios = compute_experimental_charges_ratio(service_sample_df)
 
     # Row 0: tenure=10, mc=70, tc=700 -> 700 / (10 * 70) = 1.0
     assert pytest.approx(ratios.iloc[0], rel=1e-4) == 1.0
 
-    # Row 1: tenure=0 -> fallback to 1.0 explicitly (no division by zero or epsilon anomaly)
-    assert ratios.iloc[1] == 1.0
+    # Row 1: tenure=0 -> strictly NaN (mathematically undefined 0/0; never 1.0 or epsilon)
+    assert np.isnan(ratios.iloc[1])
 
     # Row 2: tenure=24, mc=50, tc=1200 -> 1200 / 1200 = 1.0
     assert pytest.approx(ratios.iloc[2], rel=1e-4) == 1.0
 
     # Row 3: tenure=1, mc=80, tc=80 -> 80 / 80 = 1.0
     assert pytest.approx(ratios.iloc[3], rel=1e-4) == 1.0
+
+
+def test_charges_ratio_defined_indicator(service_sample_df: pd.DataFrame) -> None:
+    """Test ChargesRatioDefined deterministic binary indicator (1 if defined, 0 if undefined)."""
+    defined = compute_charges_ratio_defined(service_sample_df)
+
+    assert defined.iloc[0] == 1  # tenure=10 -> defined
+    assert defined.iloc[1] == 0  # tenure=0  -> undefined
+    assert defined.iloc[2] == 1  # tenure=24 -> defined
+    assert defined.iloc[3] == 1  # tenure=1  -> defined
+    assert defined.dtype in (np.int32, np.int64, int)
+
+
+def test_experimental_charges_ratio_invalid_denominators() -> None:
+    """Test that zero or non-positive denominators for positive tenure raise ValueError."""
+    bad_denom_df = pd.DataFrame(
+        {
+            "tenure": [10],
+            "MonthlyCharges": [0.0],  # Denominator evaluates to 0 on positive tenure
+            "TotalCharges": [100.0],
+        }
+    )
+    with pytest.raises(ValueError) as exc:
+        compute_experimental_charges_ratio(bad_denom_df)
+    assert "non-positive denominator" in str(exc.value).lower()
+
+
+def test_experimental_charges_ratio_non_finite_inputs() -> None:
+    """Test that non-finite inputs on positive tenure raise ValueError."""
+    bad_df = pd.DataFrame(
+        {
+            "tenure": [10],
+            "MonthlyCharges": [np.inf],
+            "TotalCharges": [100.0],
+        }
+    )
+    with pytest.raises(ValueError) as exc:
+        compute_experimental_charges_ratio(bad_df)
+    assert "non-finite" in str(exc.value).lower()
+
+
+def test_experimental_charges_ratio_immutability(service_sample_df: pd.DataFrame) -> None:
+    """Test that input DataFrame is not mutated during ratio calculation."""
+    original_copy = service_sample_df.copy()
+    _ = compute_experimental_charges_ratio(service_sample_df)
+    _ = compute_charges_ratio_defined(service_sample_df)
+    pd.testing.assert_frame_equal(service_sample_df, original_copy)
 
 
 def test_feature_transformers_sklearn_interface(service_sample_df: pd.DataFrame) -> None:
@@ -142,3 +190,7 @@ def test_feature_transformers_sklearn_interface(service_sample_df: pd.DataFrame)
     exp_ratio.fit(service_sample_df)
     res_ratio = exp_ratio.transform(service_sample_df)
     assert "ChargesRatio" in res_ratio.columns
+    assert "ChargesRatioDefined" in res_ratio.columns
+    feature_names = exp_ratio.get_feature_names_out()
+    assert "ChargesRatio" in feature_names
+    assert "ChargesRatioDefined" in feature_names

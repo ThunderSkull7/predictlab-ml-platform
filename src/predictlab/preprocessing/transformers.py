@@ -10,6 +10,7 @@ from sklearn.base import BaseEstimator, TransformerMixin
 from predictlab.preprocessing.cleaning import clean_total_charges
 from predictlab.preprocessing.feature_engineering import (
     compute_automatic_payment_flag,
+    compute_charges_ratio_defined,
     compute_experimental_charges_ratio,
     compute_optional_service_count,
     compute_streaming_entertainment_count,
@@ -186,7 +187,8 @@ class AutomaticPaymentTransformer(BaseEstimator, TransformerMixin):
 
 
 class ExperimentalChargesRatioTransformer(BaseEstimator, TransformerMixin):
-    """Experimental transformer for ChargesRatio with explicit zero-tenure fallback."""
+    """Experimental transformer generating mathematically valid ChargesRatio (NaN at tenure 0)
+    and deterministic ChargesRatioDefined indicator."""
 
     def __init__(
         self,
@@ -194,13 +196,15 @@ class ExperimentalChargesRatioTransformer(BaseEstimator, TransformerMixin):
         tenure_col: str = "tenure",
         monthly_charges_col: str = "MonthlyCharges",
         output_col: str = "ChargesRatio",
-        zero_tenure_fallback: float = 1.0,
+        defined_indicator_col: str = "ChargesRatioDefined",
+        include_defined_indicator: bool = True,
     ) -> None:
         self.total_charges_col = total_charges_col
         self.tenure_col = tenure_col
         self.monthly_charges_col = monthly_charges_col
         self.output_col = output_col
-        self.zero_tenure_fallback = zero_tenure_fallback
+        self.defined_indicator_col = defined_indicator_col
+        self.include_defined_indicator = include_defined_indicator
         self.feature_names_in_: np.ndarray | None = None
         self.feature_names_out_: list[str] | None = None
 
@@ -209,6 +213,8 @@ class ExperimentalChargesRatioTransformer(BaseEstimator, TransformerMixin):
             self.feature_names_in_ = np.array(X.columns, dtype=str)
             cols = list(X.columns)
             cols.append(self.output_col)
+            if self.include_defined_indicator:
+                cols.append(self.defined_indicator_col)
             self.feature_names_out_ = cols
         return self
 
@@ -223,8 +229,14 @@ class ExperimentalChargesRatioTransformer(BaseEstimator, TransformerMixin):
             tenure_col=self.tenure_col,
             monthly_charges_col=self.monthly_charges_col,
             output_col=self.output_col,
-            zero_tenure_fallback=self.zero_tenure_fallback,
         )
+        if self.include_defined_indicator:
+            df_out[self.defined_indicator_col] = compute_charges_ratio_defined(
+                df_out,
+                tenure_col=self.tenure_col,
+                monthly_charges_col=self.monthly_charges_col,
+                output_col=self.defined_indicator_col,
+            )
         return df_out
 
     def get_feature_names_out(self, input_features: Any = None) -> np.ndarray:
@@ -233,6 +245,8 @@ class ExperimentalChargesRatioTransformer(BaseEstimator, TransformerMixin):
         if input_features is not None:
             cols = list(input_features)
             cols.append(self.output_col)
+            if self.include_defined_indicator:
+                cols.append(self.defined_indicator_col)
             return np.array(cols, dtype=str)
         raise ValueError("Transformer has not been fitted.")
 

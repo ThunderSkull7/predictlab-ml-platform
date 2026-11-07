@@ -10,6 +10,7 @@ from predictlab.preprocessing.cleaning import (
 )
 from predictlab.preprocessing.feature_engineering import (
     compute_automatic_payment_flag,
+    compute_charges_ratio_defined,
     compute_experimental_charges_ratio,
     compute_optional_service_count,
     compute_streaming_entertainment_count,
@@ -87,6 +88,7 @@ __all__ = [
     "compute_streaming_entertainment_count",
     "compute_automatic_payment_flag",
     "compute_experimental_charges_ratio",
+    "compute_charges_ratio_defined",
     # Transformers
     "TotalChargesCleaner",
     "OptionalServiceCounter",

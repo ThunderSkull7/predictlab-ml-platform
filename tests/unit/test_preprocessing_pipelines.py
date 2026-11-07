@@ -124,7 +124,7 @@ def test_preprocessor_serialization(train_test_data: tuple) -> None:
 
 
 def test_experimental_preprocessor_pipeline(train_test_data: tuple) -> None:
-    """Test experimental pipeline with ChargesRatio, AutomaticPayment, and service subtotals."""
+    """Test experimental pipeline with ChargesRatio, ChargesRatioDefined, AutomaticPayment, and subtotals."""
     X_train, _, _, _ = train_test_data
 
     exp_pipeline = create_experimental_preprocessor(
@@ -135,9 +135,66 @@ def test_experimental_preprocessor_pipeline(train_test_data: tuple) -> None:
     exp_pipeline.fit(X_train)
     transformed = transform_to_dataframe(exp_pipeline, X_train)
 
-    assert transformed.shape == (5634, 51)
+    assert transformed.shape == (5634, 52)
     feature_names = get_preprocessor_feature_names(exp_pipeline)
     assert "num__ChargesRatio" in feature_names
+    assert "num__ChargesRatioDefined" in feature_names
     assert "num__AutomaticPayment" in feature_names
     assert "num__TechnicalProtectionCount" in feature_names
     assert "num__StreamingEntertainmentCount" in feature_names
+
+
+def test_experimental_preprocessor_zero_tenure_imputation_and_leakage(train_test_data: tuple) -> None:
+    """Test experimental pipeline handles zero-tenure undefined ratios via training-only imputer."""
+    X_train, X_test, _, _ = train_test_data
+
+    # Use unscaled experimental pipeline to inspect raw imputed values cleanly
+    exp_pipeline = create_experimental_preprocessor(
+        include_charges_ratio=True,
+        include_automatic_payment=False,
+        include_service_subtotals=False,
+        scale_numeric=False,
+    )
+    exp_pipeline.fit(X_train)
+
+    # Imputer statistics learned strictly from training partition
+    col_trans = exp_pipeline.named_steps["column_transform"]
+    imputer = col_trans.named_transformers_["num"].named_steps["imputer"]
+    num_features = [
+        "tenure",
+        "MonthlyCharges",
+        "TotalCharges",
+        "OptionalServiceCount",
+        "ChargesRatio",
+        "ChargesRatioDefined",
+    ]
+    imputer_stats = dict(zip(num_features, imputer.statistics_, strict=True))
+
+    # The training median ChargesRatio is ~1.0000
+    assert pytest.approx(imputer_stats["ChargesRatio"], abs=0.05) == 1.0
+    assert imputer_stats["ChargesRatioDefined"] == 1.0  # Dominant class is defined
+
+    # Transform test set (containing zero-tenure records)
+    test_trans = transform_to_dataframe(exp_pipeline, X_test)
+    assert not test_trans.isna().any().any()
+
+    # Identify zero tenure test records
+    test_zero_mask = X_test["tenure"] == 0
+    assert test_zero_mask.sum() > 0
+
+    # ChargesRatioDefined must be 0.0 for zero-tenure records and 1.0 for positive tenure
+    assert (test_trans.loc[test_zero_mask, "num__ChargesRatioDefined"] == 0.0).all()
+    assert (test_trans.loc[~test_zero_mask, "num__ChargesRatioDefined"] == 1.0).all()
+
+    # The missing ChargesRatio at tenure==0 in test set was imputed with training median
+    for val in test_trans.loc[test_zero_mask, "num__ChargesRatio"]:
+        assert pytest.approx(val, abs=1e-4) == imputer_stats["ChargesRatio"]
+
+    # Verify parameter invariance: transforming corrupted test data does not alter training imputer stats
+    corrupted_test = X_test.copy()
+    corrupted_test["tenure"] = 99999
+    corrupted_test["MonthlyCharges"] = 99999.0
+    corrupted_test["TotalCharges"] = "9999999.0"
+
+    _ = transform_to_dataframe(exp_pipeline, corrupted_test)
+    np.testing.assert_array_equal(imputer.statistics_, list(imputer_stats.values()))

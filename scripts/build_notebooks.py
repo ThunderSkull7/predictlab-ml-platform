@@ -463,7 +463,10 @@ from predictlab.data.load import load_raw_dataset
 from predictlab.preprocessing import (
     clean_total_charges,
     compute_automatic_payment_flag,
+    compute_charges_ratio_defined,
+    compute_experimental_charges_ratio,
     compute_optional_service_count,
+    create_experimental_preprocessor,
     create_linear_preprocessor,
     create_tree_preprocessor,
     get_preprocessor_feature_names,
@@ -548,9 +551,11 @@ display(sample_cleaned[['tenure', 'TotalCharges', 'MonthlyCharges']])"""
 
     nb.cells.append(
         nbf.v4.new_markdown_cell(
-            """## 4. Domain Feature Engineering
+            """## 4. Domain Feature Engineering & Mathematical Validity
 
-We evaluate `OptionalServiceCount`, counting the number of active optional internet services (0 to 6), mapping `"No internet service"` cleanly to 0."""
+We evaluate `OptionalServiceCount` (0 to 6), `AutomaticPayment`, and the corrected experimental `ChargesRatio`.
+- When `tenure == 0`, `ChargesRatio` is mathematically undefined ($0/0$) and is explicitly represented as `NaN` (never fabricated as 1.0).
+- `ChargesRatioDefined` provides a deterministic binary indicator (1 if defined, 0 if undefined)."""
         )
     )
 
@@ -559,19 +564,31 @@ We evaluate `OptionalServiceCount`, counting the number of active optional inter
             """opt_counts = compute_optional_service_count(X_train)
 auto_flags = compute_automatic_payment_flag(X_train)
 
+# Clean TotalCharges on training partition first to evaluate ChargesRatio
+X_train_cleaned = clean_total_charges(X_train)
+charges_ratio = compute_experimental_charges_ratio(X_train_cleaned)
+charges_ratio_defined = compute_charges_ratio_defined(X_train_cleaned)
+
 print("OptionalServiceCount distribution in X_train:")
 print(opt_counts.value_counts().sort_index())
 
 print("\\nAutomaticPayment flag distribution in X_train:")
-print(auto_flags.value_counts())"""
+print(auto_flags.value_counts())
+
+print(f"\\nChargesRatio NaN count in X_train: {charges_ratio.isna().sum()} (strictly matching tenure==0 count: {(X_train['tenure'] == 0).sum()})")
+print("ChargesRatioDefined distribution in X_train:")
+print(charges_ratio_defined.value_counts())"""
         )
     )
 
     nb.cells.append(
         nbf.v4.new_markdown_cell(
-            """## 5. Preprocessing Pipelines (Linear vs. Tree Families)
+            """## 5. Preprocessing Pipelines (Linear, Tree & Experimental Families)
 
-We construct both the linear-model preprocessor (with `StandardScaler`) and the tree-model preprocessor (preserving natural units without scaling).
+We construct:
+1. Linear-model preprocessor (with `StandardScaler`).
+2. Tree-model preprocessor (preserving natural units without scaling).
+3. Experimental preprocessor (incorporating `ChargesRatio`, `ChargesRatioDefined`, and `AutomaticPayment`, with training-only median imputation of missing ratios).
 Transformers are fitted strictly on `X_train` and applied to `X_test`."""
         )
     )
@@ -590,13 +607,21 @@ tree_pipeline.fit(X_train)
 X_train_tree = transform_to_dataframe(tree_pipeline, X_train)
 X_test_tree = transform_to_dataframe(tree_pipeline, X_test)
 
+# 3. Experimental preprocessor
+exp_pipeline = create_experimental_preprocessor(include_charges_ratio=True, include_automatic_payment=True)
+exp_pipeline.fit(X_train)
+X_train_exp = transform_to_dataframe(exp_pipeline, X_train)
+X_test_exp = transform_to_dataframe(exp_pipeline, X_test)
+
 print(f"Linear Preprocessed Shapes: Train={X_train_lin.shape}, Test={X_test_lin.shape}")
 print(f"Tree Preprocessed Shapes:   Train={X_train_tree.shape}, Test={X_test_tree.shape}")
+print(f"Exp Preprocessed Shapes:    Train={X_train_exp.shape}, Test={X_test_exp.shape}")
 
 feature_names = get_preprocessor_feature_names(linear_pipeline)
-print(f"\\nTotal transformed features: {len(feature_names)}")
-print("First 10 features:", feature_names[:10])
-print("Contract features:", [f for f in feature_names if 'Contract' in f])"""
+exp_feature_names = get_preprocessor_feature_names(exp_pipeline)
+print(f"\\nTotal baseline features: {len(feature_names)}")
+print(f"Total experimental features: {len(exp_feature_names)}")
+print("Experimental ratio features:", [f for f in exp_feature_names if 'ChargesRatio' in f])"""
         )
     )
 
