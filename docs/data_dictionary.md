@@ -80,3 +80,16 @@
 | `TechSupport` | No, Yes, No internet | 3473 (49%), 2044 (29%), 1526 (22%) | 41.65%, 15.17%, 7.40% | **0.344** | $< 10^{-180}$ |
 | `InternetService` | Fiber optic, DSL, No | 3096 (44%), 2421 (34%), 1526 (22%) | 41.89%, 18.96%, 7.40% | **0.320** | $< 10^{-155}$ |
 | `PaymentMethod` | Electronic check, Mailed check, Bank auto, Card auto | 2365 (34%), 1612 (23%), 1544 (22%), 1522 (22%) | 45.29%, 19.11%, 16.71%, 15.24% | **0.302** | $< 10^{-135}$ |
+
+---
+
+## 5. Phase 3 Engineered Features Specification
+
+| Feature Name | Source Columns | Data Type | Range / Domain | Purpose & Definition | Pipeline Status |
+|---|---|---|---|---|---|
+| `OptionalServiceCount` | `OnlineSecurity`, `OnlineBackup`, `DeviceProtection`, `TechSupport`, `StreamingTV`, `StreamingMovies` | `int64` | $[0, 6]$ | Total count of subscribed optional internet add-on services (`"Yes"` = 1, `"No"` = 0, `"No internet service"` = 0). Quantifies subscriber service engagement. | **Baseline Feature** (Numerical branch) |
+| `TechnicalProtectionCount` | `OnlineSecurity`, `OnlineBackup`, `DeviceProtection`, `TechSupport` | `int64` | $[0, 4]$ | Subtotal count of proactive cybersecurity and device troubleshooting services. | **Experimental Candidate** |
+| `StreamingEntertainmentCount` | `StreamingTV`, `StreamingMovies` | `int64` | $[0, 2]$ | Subtotal count of digital entertainment streaming packages. | **Experimental Candidate** |
+| `AutomaticPayment` | `PaymentMethod` | `int64` | $\{0, 1\}$ | Binary indicator ($1$ if Bank transfer auto or Credit card auto, $0$ otherwise). Captures passive payment retention. | **Alternative Representation** |
+| `ChargesRatio` | `TotalCharges`, `tenure`, `MonthlyCharges` | `float64` | $[0.0, \infty)$ | Ratio of $\text{TotalCharges} / (\text{tenure} \times \text{MonthlyCharges})$. Evaluates historical vs. current billing rate consistency. Explicitly assigned $1.0$ at $\text{tenure} == 0$. | **Experimental Candidate** (Excluded from default baseline) |
+

@@ -81,11 +81,28 @@ class Settings(BaseSettings):
         default=TELCO_COLUMNS,
         description="Expected canonical feature set in raw dataset",
     )
+    test_size: float = Field(
+        default=0.20,
+        description="Default stratified holdout test split fraction",
+    )
+    random_state: int = Field(
+        default=42,
+        description="Global deterministic random seed for data splitting and sampling",
+    )
+    splits_dir_name: str = Field(
+        default="splits",
+        description="Directory name for dataset partitioning manifests under data directory",
+    )
 
     @property
     def data_dir(self) -> Path:
         """Directory path for all data assets."""
         return self.project_root / self.data_dir_name
+
+    @property
+    def splits_dir(self) -> Path:
+        """Directory path for train/test partition manifests."""
+        return self.data_dir / self.splits_dir_name
 
     @property
     def raw_data_dir(self) -> Path:

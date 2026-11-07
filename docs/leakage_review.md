@@ -83,3 +83,29 @@ The Phase 2 statistical profiling re-audited all 21 columns and confirmed:
 2. **Contract Operational Precedence**: While Month-to-month contracts strongly associate with churn ($\chi^2 = 1184.6, V = 0.408$), contract terms are established at agreement inception, confirming they represent valid pre-event operational risk factors.
 3. **TotalCharges Accumulation**: The empirical consistency check (100% match with MonthlyCharges at `tenure == 1`, $\rho = 0.889$ with `tenure`) confirms that `TotalCharges` represents historical billed revenue to date, rather than post-cancellation accumulations.
 4. **Conclusion**: Feature sets remain free of target leakage under retrospective snapshot modeling assumptions. Setting `TotalCharges = 0.0` at `tenure == 0` in Phase 3 introduces no outcome information.
+
+---
+
+## 6. Phase 3 Pipeline Leakage Prevention Architecture & Invariance Proof
+
+Phase 3 established formal architectural and programmatic safeguards to guarantee zero leakage:
+
+### A. Preprocessing Boundary Contracts
+1. **Identifier Exclusion**: `customerID` is strictly removed from feature matrices $X_{\text{train}}$ and $X_{\text{test}}$ prior to pipeline ingestion. A redundant `ColumnDropper` step in the pipeline provides defense-in-depth against accidental leakage.
+2. **Target Isolation**: The target `Churn` is extracted and binary-encoded (`{"No": 0, "Yes": 1}`) before any transformation. The target series $y$ is never passed to feature transformers or column transformers.
+3. **No Target-Derived Features**: All engineered features (`OptionalServiceCount`, `AutomaticPayment`, and experimental `ChargesRatio`) are derived purely from exogenous or operational service features, never using target statistics, out-of-fold target encoding, or label-correlated aggregations.
+4. **Strict Training-Only Fitting**:
+   - `SimpleImputer` medians are calculated exclusively from $X_{\text{train}}$.
+   - `StandardScaler` empirical means $\mu$ and standard deviations $\sigma$ are calculated exclusively from $X_{\text{train}}$.
+   - `OneHotEncoder` category dictionaries are learned exclusively from $X_{\text{train}}$.
+   - Unseen categories in test or operational inference data are handled gracefully via `handle_unknown="ignore"` (assigned all zeros), preventing training refitting or runtime crashes.
+5. **No Pre-Split Resampling**: No synthetic oversampling (e.g. SMOTE, ADASYN) or undersampling is applied prior to partitioning.
+6. **Deterministic Cleanliness**: Deterministic cleaning operations (converting whitespace to NaN and validating $\text{tenure} == 0$) operate purely record-by-record and learn no global distributional parameters.
+
+### B. Empirical Leakage Invariance Proof
+To verify these boundaries programmatically, an automated test ([`test_leakage_invariance_extreme_test_values`](file:///d:/Project/Predictive%20Analytics%20Platform/tests/integration/test_preprocessing_pipeline.py#L24)) validates that:
+- When an already-fitted pipeline is presented with a heavily corrupted test set containing extreme unphysical numerical values ($\text{tenure} = 99,999$, $\text{MonthlyCharges} = 88,888.0$, $\text{TotalCharges} = 9,999,999.0$), the stored training parameters (`scaler.mean_`, `scaler.scale_`, `imputer.statistics_`) remain 100% bit-for-bit identical.
+- Re-transforming $X_{\text{train}}$ before and after transforming the corrupted test data produces identical output matrices.
+
+> [!IMPORTANT]
+> Merely encapsulating operations in a scikit-learn `Pipeline` does not automatically eliminate all methodological leakage. The cross-sectional nature of the IBM dataset inherently carries survivorship selection and lacks longitudinal event sequences. The platform's predictive capability is strictly characterized as retrospective risk ranking, not future forecasting.

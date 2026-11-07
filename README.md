@@ -78,7 +78,8 @@ predictlab-ml-platform/
 │
 ├── notebooks/                         # Executed analytical notebooks
 │   ├── 01_data_audit.ipynb            # Data quality audit & TotalCharges investigation
-│   └── 02_eda.ipynb                   # Comprehensive exploratory analysis & Q1-Q10 findings
+│   ├── 02_eda.ipynb                   # Comprehensive exploratory analysis & Q1-Q10 findings
+│   └── 03_preprocessing_and_feature_engineering.ipynb # Preprocessing pipeline, splitting & leakage audit
 │
 ├── src/
 │   └── predictlab/                    # Headless core Python package
@@ -89,12 +90,20 @@ predictlab-ml-platform/
 │       │   ├── __init__.py
 │       │   ├── load.py                # CSV ingestion with error boundaries & duplicate header detection
 │       │   └── validate.py            # Active Pydantic schema & consistency validation
-│       └── profiling/                 # Profiling & diagnostic insights package (Phase 2)
+│       ├── profiling/                 # Profiling & diagnostic insights package (Phase 2)
+│       │   ├── __init__.py
+│       │   ├── quality.py             # Data quality audit & anomaly investigation
+│       │   ├── summary.py             # Univariate numeric & categorical summaries
+│       │   ├── insights.py            # Segment churn rates, Chi-square & Mann-Whitney tests
+│       │   └── visuals.py             # Publication-grade visual figure generation
+│       └── preprocessing/             # Preprocessing & transformation package (Phase 3)
 │           ├── __init__.py
-│           ├── quality.py             # Data quality audit & anomaly investigation
-│           ├── summary.py             # Univariate numeric & categorical summaries
-│           ├── insights.py            # Segment churn rates, Chi-square & Mann-Whitney tests
-│           └── visuals.py             # Publication-grade visual figure generation
+│           ├── schema.py              # Feature schemas, contracts & allowed category domains
+│           ├── cleaning.py            # TotalCharges deterministic cleaning & zero-tenure validation
+│           ├── feature_engineering.py # OptionalServiceCount, AutomaticPayment & ChargesRatio
+│           ├── transformers.py        # Scikit-learn custom transformers with get_feature_names_out
+│           ├── split.py               # Stratified holdout partition & manifest persistence
+│           └── pipelines.py           # Linear and tree ColumnTransformer factory functions
 │
 ├── app/                               # Streamlit UI application (Phase 6)
 ├── models/                            # Serialized model binaries (Phase 4)
@@ -102,6 +111,7 @@ predictlab-ml-platform/
 ├── reports/                           # Generated evaluation reports & figures
 │   ├── data_quality_report.md         # Comprehensive data quality audit report
 │   ├── eda_report.md                  # Detailed analytical findings & statistical test report
+│   ├── preprocessing_report.md        # Preprocessing, feature engineering & transformation report
 │   └── figures/                       # 16 publication-grade visualizations
 │
 ├── tests/
@@ -111,10 +121,15 @@ predictlab-ml-platform/
 │   │   ├── test_config.py             # Config & path resolution tests
 │   │   ├── test_load.py               # Ingestion & error-handling tests
 │   │   ├── test_validate.py           # Schema & Pydantic consistency validation tests
-│   │   └── test_profiling.py          # Statistical profiling & data quality tests
+│   │   ├── test_profiling.py          # Statistical profiling & data quality tests
+│   │   ├── test_preprocessing_cleaning.py  # TotalCharges validation & imputation tests
+│   │   ├── test_preprocessing_features.py  # OptionalServiceCount & feature engineering tests
+│   │   ├── test_preprocessing_split.py     # Stratified partitioning & manifest tests
+│   │   └── test_preprocessing_pipelines.py # ColumnTransformer & serialization tests
 │   └── integration/
 │       ├── test_data_pipeline.py      # End-to-end ingestion/validation pipeline
-│       └── test_eda_pipeline.py       # End-to-end profiling pipeline on canonical dataset
+│       ├── test_eda_pipeline.py       # End-to-end profiling pipeline on canonical dataset
+│       └── test_preprocessing_pipeline.py # Leakage invariance & full pipeline integration
 │
 ├── .env.example                       # Environment variable template
 ├── .gitignore                         # Comprehensive ignore rules
@@ -150,7 +165,14 @@ PredictLab is developed following a rigorous 7-phase engineering plan:
   - Empirically reassessed `ChargesRatio` as an experimental candidate requiring explicit zero-tenure handling.
   - Renamed and formalized `OptionalServiceCount` across 6 internet add-on services.
   - Clarified `TotalCharges` 0.0 imputation as a Phase 3 pipeline validation step with unmodified raw CSV.
-- [ ] **Phase 3: Preprocessing, Feature Engineering & Leakage-Free Pipeline**
+- [x] **Phase 3: Preprocessing, Feature Engineering & Leakage-Free Pipeline**
+  - Leakage-safe 80/20 stratified partitioning with `split_manifest.json` persistence; `customerID` excluded.
+  - Mandatory `TotalCharges` deterministic cleaning with strict zero-tenure missingness validation and 0.0 imputation.
+  - Domain feature engineering: `OptionalServiceCount` (0-6), `AutomaticPayment`, and experimental `ChargesRatio`.
+  - Scikit-learn `Pipeline` and `ColumnTransformer` factory functions for Linear and Tree model families.
+  - Empirical leakage invariance verification proving training parameters are untouched by corrupted test sets.
+  - Fully executed `notebooks/03_preprocessing_and_feature_engineering.ipynb` and `reports/preprocessing_report.md`.
+  - 64 automated tests passing (100% pass rate) and clean Ruff static analysis.
 - [ ] **Phase 4: Model Exploration, Baseline Establishment & Comparison**
 - [ ] **Phase 5: Probability Calibration, Threshold Tuning & Evaluation**
 - [ ] **Phase 6: Interactive Dashboard & Explainable Inference UI**

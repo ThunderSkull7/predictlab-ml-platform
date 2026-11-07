@@ -62,12 +62,20 @@ predictlab-ml-platform/
 │   ├── data/                   # Data ingestion and schema validation
 │   │   ├── load.py
 │   │   └── validate.py
-│   └── profiling/              # Profiling, quality auditing, and diagnostic insights (Phase 2)
+│   ├── profiling/              # Profiling, quality auditing, and diagnostic insights (Phase 2)
+│   │   ├── __init__.py
+│   │   ├── quality.py          # Data quality audit & TotalCharges anomaly investigation
+│   │   ├── summary.py          # Univariate numeric and categorical summaries
+│   │   ├── insights.py         # Segment churn rates, Chi-square & Mann-Whitney tests
+│   │   └── visuals.py          # Publication-grade visual figure generation
+│   └── preprocessing/          # Leakage-free preprocessing, feature engineering & pipelines (Phase 3)
 │       ├── __init__.py
-│       ├── quality.py          # Data quality audit & TotalCharges anomaly investigation
-│       ├── summary.py          # Univariate numeric and categorical summaries
-│       ├── insights.py         # Segment churn rates, Chi-square & Mann-Whitney tests
-│       └── visuals.py          # Publication-grade visual figure generation
+│       ├── schema.py           # Feature definitions, contracts & domain boundaries
+│       ├── cleaning.py         # Deterministic TotalCharges cleaning & zero-tenure validation
+│       ├── feature_engineering.py # OptionalServiceCount, AutomaticPayment & ChargesRatio
+│       ├── transformers.py     # Scikit-learn compatible custom transformers
+│       ├── split.py            # Stratified holdout partitioning & manifest persistence
+│       └── pipelines.py        # Linear and tree ColumnTransformer pipeline factories
 ├── app/                        # Streamlit web application (Phase 6)
 ├── models/                     # Serialized model binaries (Phase 4-5)
 ├── artifacts/                  # Serialized transformers, metrics, and figures
@@ -104,6 +112,13 @@ predictlab-ml-platform/
 - **Statistical Summaries (`summary.py`)**: Calculates robust distribution statistics (mean, median, IQR, skewness) and categorical frequency tables without mutating raw inputs.
 - **Inferential Testing (`insights.py`)**: Computes segment churn rates, Chi-square tests of independence with Benjamini-Hochberg False Discovery Rate (FDR) adjustments, bias-corrected Cramér's V, Mann-Whitney U, and Welch's t-tests.
 - **Visualization Suite (`visuals.py`)**: Generates 16 publication-grade figures saved to `reports/figures/` for exploratory reporting and notebook integration.
+
+### E. Preprocessing & Feature Engineering (`predictlab.preprocessing`)
+- **Dataset Partitioning (`split.py`)**: Executes 80/20 stratified holdout partitioning, target extraction, identifier removal, and lightweight manifest serialization (`split_manifest.json`).
+- **Data Cleaning (`cleaning.py`)**: Implements strict `TotalCharges` whitespace-to-NaN parsing, zero-tenure validation guardrails, and $0.0$ domain imputation.
+- **Feature Engineering (`feature_engineering.py`)**: Implements domain feature extraction (`OptionalServiceCount`, `AutomaticPayment`, and experimental `ChargesRatio`).
+- **Custom Transformers (`transformers.py`)**: Exposes scikit-learn compatible transformers (`TotalChargesCleaner`, `OptionalServiceCounter`, `ColumnDropper`, etc.) with `get_feature_names_out()`.
+- **Pipeline Factories (`pipelines.py`)**: Assembles production `ColumnTransformer` pipelines for both linear models (with standardization) and tree models (preserving natural units). Includes Joblib serialization utilities.
 
 ---
 

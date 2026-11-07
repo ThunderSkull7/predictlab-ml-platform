@@ -432,6 +432,239 @@ print(num_tests[['feature', 'retained_median', 'churned_median', 'rank_biserial_
     print(f"Saved executed notebook to {out_file}")
 
 
+def build_and_execute_notebook_03():
+    """Build and execute notebooks/03_preprocessing_and_feature_engineering.ipynb."""
+    nb = nbf.v4.new_notebook()
+
+    nb.cells.append(
+        nbf.v4.new_markdown_cell(
+            """# PredictLab — Notebook 03: Preprocessing, Feature Engineering & Leakage-Free Pipeline
+
+## Objective
+This notebook demonstrates the end-to-end Phase 3 preprocessing and feature engineering architecture:
+1. Canonical dataset loading and schema contract verification.
+2. Leakage-free feature/target separation and reproducible stratified holdout splitting (80% train / 20% test).
+3. Deterministic cleaning and domain validation of `TotalCharges` (resolving the 11 zero-tenure whitespace anomalies).
+4. Domain feature engineering (`OptionalServiceCount`, `AutomaticPayment`, and experimental `ChargesRatio`).
+5. Assembling scikit-learn `Pipeline` and `ColumnTransformer` preprocessors for both Linear and Tree-based model families.
+6. Fitting preprocessors strictly on the training partition and transforming held-out test data.
+7. Empirical verification of parameter invariance and data leakage prevention.
+8. Artifact serialization and deserialization via Joblib.
+"""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_code_cell(
+            """import numpy as np
+import pandas as pd
+
+from predictlab.data.load import load_raw_dataset
+from predictlab.preprocessing import (
+    clean_total_charges,
+    compute_automatic_payment_flag,
+    compute_optional_service_count,
+    create_linear_preprocessor,
+    create_tree_preprocessor,
+    get_preprocessor_feature_names,
+    load_preprocessor,
+    save_preprocessor,
+    split_dataset,
+    transform_to_dataframe,
+    validate_dataset_contract,
+)
+
+print("Preprocessing modules imported successfully.")"""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_markdown_cell(
+            """## 1. Load Canonical Data & Validate Schema Contract
+
+We load the canonical dataset through PredictLab's immutable loader and validate that it strictly satisfies the preprocessing schema contract."""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_code_cell(
+            """df_raw = load_raw_dataset()
+validate_dataset_contract(df_raw, check_target=True)
+print(f"Canonical dataset loaded: {df_raw.shape[0]} rows, {df_raw.shape[1]} columns.")
+print("Schema contract verified: All 19 predictive features, ID, and target present with valid domains.")"""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_markdown_cell(
+            """## 2. Leakage-Safe Stratified Train/Test Partitioning
+
+We perform an 80/20 stratified holdout split.
+- `customerID` is excluded from feature matrices to prevent identifier memorization.
+- `Churn` is extracted and encoded as binary integer (`No` = 0, `Yes` = 1).
+- The split is stratified by `Churn` using global seed 42 to preserve class balance.
+- A lightweight `split_manifest.json` is generated to guarantee auditability and reproducibility."""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_code_cell(
+            """X_train, X_test, y_train, y_test, manifest = split_dataset(
+    df_raw,
+    test_size=0.20,
+    random_state=42,
+    save_manifest=True,
+)
+
+print(f"Training set: X_train={X_train.shape}, y_train={y_train.shape} (Churn rate: {y_train.mean():.4%})")
+print(f"Holdout test: X_test={X_test.shape}, y_test={y_test.shape} (Churn rate: {y_test.mean():.4%})")
+print(f"Customer ID overlap between train and test: {len(set(manifest.train_customer_ids).intersection(set(manifest.test_customer_ids)))}")"""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_markdown_cell(
+            """## 3. TotalCharges Cleaning & Zero-Tenure Validation
+
+We inspect the 11 zero-tenure records with whitespace `TotalCharges` across the train and test partitions.
+Our cleaning transformation asserts that missingness occurs *strictly* at `tenure == 0`, and imputes `0.0`."""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_code_cell(
+            """train_zero_tenure = X_train[X_train['tenure'] == 0]
+test_zero_tenure = X_test[X_test['tenure'] == 0]
+print(f"Zero-tenure signups in X_train: {len(train_zero_tenure)}")
+print(f"Zero-tenure signups in X_test:  {len(test_zero_tenure)}")
+print(f"Total zero-tenure signups:      {len(train_zero_tenure) + len(test_zero_tenure)}")
+
+# Demonstrate deterministic cleaning on a sample slice
+sample_cleaned = clean_total_charges(train_zero_tenure[['tenure', 'TotalCharges', 'MonthlyCharges']])
+print("\\nSample cleaned zero-tenure records:")
+display(sample_cleaned[['tenure', 'TotalCharges', 'MonthlyCharges']])"""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_markdown_cell(
+            """## 4. Domain Feature Engineering
+
+We evaluate `OptionalServiceCount`, counting the number of active optional internet services (0 to 6), mapping `"No internet service"` cleanly to 0."""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_code_cell(
+            """opt_counts = compute_optional_service_count(X_train)
+auto_flags = compute_automatic_payment_flag(X_train)
+
+print("OptionalServiceCount distribution in X_train:")
+print(opt_counts.value_counts().sort_index())
+
+print("\\nAutomaticPayment flag distribution in X_train:")
+print(auto_flags.value_counts())"""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_markdown_cell(
+            """## 5. Preprocessing Pipelines (Linear vs. Tree Families)
+
+We construct both the linear-model preprocessor (with `StandardScaler`) and the tree-model preprocessor (preserving natural units without scaling).
+Transformers are fitted strictly on `X_train` and applied to `X_test`."""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_code_cell(
+            """# 1. Linear preprocessor
+linear_pipeline = create_linear_preprocessor()
+linear_pipeline.fit(X_train)
+X_train_lin = transform_to_dataframe(linear_pipeline, X_train)
+X_test_lin = transform_to_dataframe(linear_pipeline, X_test)
+
+# 2. Tree preprocessor
+tree_pipeline = create_tree_preprocessor()
+tree_pipeline.fit(X_train)
+X_train_tree = transform_to_dataframe(tree_pipeline, X_train)
+X_test_tree = transform_to_dataframe(tree_pipeline, X_test)
+
+print(f"Linear Preprocessed Shapes: Train={X_train_lin.shape}, Test={X_test_lin.shape}")
+print(f"Tree Preprocessed Shapes:   Train={X_train_tree.shape}, Test={X_test_tree.shape}")
+
+feature_names = get_preprocessor_feature_names(linear_pipeline)
+print(f"\\nTotal transformed features: {len(feature_names)}")
+print("First 10 features:", feature_names[:10])
+print("Contract features:", [f for f in feature_names if 'Contract' in f])"""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_markdown_cell(
+            """## 6. Empirical Verification of Parameter Invariance (Leakage Prevention)
+
+We demonstrate that transforming a corrupted test set with extreme numerical outliers does not modify the training-fitted parameters."""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_code_cell(
+            """col_trans = linear_pipeline.named_steps["column_transform"]
+scaler = col_trans.named_transformers_["num"].named_steps["scaler"]
+initial_mean = scaler.mean_.copy()
+initial_scale = scaler.scale_.copy()
+
+# Construct corrupted test set with extreme unphysical values
+corrupted_test = X_test.copy()
+corrupted_test["tenure"] = 99999
+corrupted_test["MonthlyCharges"] = 99999.0
+corrupted_test["TotalCharges"] = "9999999.0"
+
+# Transform corrupted test set
+_ = transform_to_dataframe(linear_pipeline, corrupted_test)
+
+# Verify parameters remain unchanged
+assert np.array_equal(scaler.mean_, initial_mean), "Leakage detected: scaler mean mutated!"
+assert np.array_equal(scaler.scale_, initial_scale), "Leakage detected: scaler scale mutated!"
+print("Leakage invariance verified: Training-fitted scaler parameters are completely invariant to test set data.")"""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_markdown_cell(
+            """## 7. Artifact Serialization
+
+We serialize the fitted linear preprocessor to disk using joblib and verify that the reloaded pipeline produces identical transformations."""
+        )
+    )
+
+    nb.cells.append(
+        nbf.v4.new_code_cell(
+            """from pathlib import Path
+
+artifact_path = Path("../artifacts/preprocessor.joblib")
+save_preprocessor(linear_pipeline, artifact_path)
+
+loaded_pipeline = load_preprocessor(artifact_path)
+reloaded_test_lin = transform_to_dataframe(loaded_pipeline, X_test)
+
+pd.testing.assert_frame_equal(X_test_lin, reloaded_test_lin)
+print(f"Preprocessor serialized and successfully reloaded from {artifact_path.resolve()}.")
+print("Transformation reproducibility confirmed: 100% bit-for-bit match.")"""
+        )
+    )
+
+    out_file = NOTEBOOKS_DIR / "03_preprocessing_and_feature_engineering.ipynb"
+    print(f"Executing {out_file}...")
+    client = NotebookClient(nb, timeout=120, kernel_name="python3")
+    executed_nb = client.execute()
+    with open(out_file, "w", encoding="utf-8") as f:
+        nbf.write(executed_nb, f)
+    print(f"Saved executed notebook to {out_file}")
+
+
 if __name__ == "__main__":
     build_and_execute_notebook_01()
     build_and_execute_notebook_02()
+    build_and_execute_notebook_03()
