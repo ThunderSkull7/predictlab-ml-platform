@@ -3,7 +3,7 @@
 from collections.abc import Sequence
 
 import pandas as pd
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from predictlab.config import get_settings
 from predictlab.logging_config import get_logger
@@ -32,11 +32,11 @@ class SchemaValidationError(DataValidationError):
 
 
 class ValidationResult(BaseModel):
-    """Structured report detailing dataset validation findings."""
+    """Structured report detailing dataset validation findings with active integrity validation."""
 
     is_valid: bool = Field(description="Whether the dataset passed all mandatory checks")
-    row_count: int = Field(description="Number of rows in the dataset")
-    column_count: int = Field(description="Number of columns in the dataset")
+    row_count: int = Field(ge=0, description="Number of rows in the dataset")
+    column_count: int = Field(ge=0, description="Number of columns in the dataset")
     missing_columns: list[str] = Field(
         default_factory=list, description="Expected columns absent from dataset"
     )
@@ -50,10 +50,28 @@ class ValidationResult(BaseModel):
     target_classes: list[str] = Field(
         default_factory=list, description="Unique values observed in target column"
     )
-    duplicate_rows: int = Field(default=0, description="Count of duplicate rows across all columns")
-    duplicate_ids: int = Field(default=0, description="Count of duplicate values in ID column")
+    duplicate_rows: int = Field(default=0, ge=0, description="Count of duplicate rows across all columns")
+    duplicate_ids: int = Field(default=0, ge=0, description="Count of duplicate values in ID column")
     errors: list[str] = Field(default_factory=list, description="Critical validation error messages")
     warnings: list[str] = Field(default_factory=list, description="Non-fatal warning notices")
+
+    @model_validator(mode="after")
+    def verify_validation_consistency(self) -> "ValidationResult":
+        """Validate logical consistency between validity flag, error lists, and row counts."""
+        expected_validity = len(self.errors) == 0
+        if self.is_valid != expected_validity:
+            raise ValueError(
+                f"ValidationResult consistency violation: is_valid={self.is_valid} but error count is {len(self.errors)}."
+            )
+        if self.duplicate_rows > self.row_count:
+            raise ValueError(
+                f"duplicate_rows ({self.duplicate_rows}) cannot exceed row_count ({self.row_count})."
+            )
+        if not self.target_present and len(self.target_classes) > 0:
+            raise ValueError(
+                "target_classes cannot be populated when target_present is False."
+            )
+        return self
 
 
 def validate_raw_data(

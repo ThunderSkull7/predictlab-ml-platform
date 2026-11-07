@@ -104,3 +104,39 @@ def test_validate_duplicate_rows_and_ids():
     assert result.duplicate_ids == 1
     assert any("completely duplicated rows" in w.lower() for w in result.warnings)
     assert any("duplicate keys" in w.lower() for w in result.warnings)
+
+
+def test_validation_result_pydantic_consistency():
+    """Verify that ValidationResult Pydantic model enforces logical consistency."""
+    from pydantic import ValidationError
+
+    from predictlab.data.validate import ValidationResult
+
+    # Invalid: is_valid=True but errors is non-empty
+    with pytest.raises(ValidationError, match="ValidationResult consistency violation"):
+        ValidationResult(
+            is_valid=True,
+            row_count=10,
+            column_count=5,
+            target_present=True,
+            errors=["Fatal error occurred"],
+        )
+
+    # Invalid: is_valid=False but errors is empty
+    with pytest.raises(ValidationError, match="ValidationResult consistency violation"):
+        ValidationResult(
+            is_valid=False,
+            row_count=10,
+            column_count=5,
+            target_present=True,
+            errors=[],
+        )
+
+    # Invalid: negative row_count
+    with pytest.raises(ValidationError):
+        ValidationResult(
+            is_valid=True,
+            row_count=-1,
+            column_count=5,
+            target_present=True,
+        )

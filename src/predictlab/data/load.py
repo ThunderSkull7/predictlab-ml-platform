@@ -1,11 +1,12 @@
 """Data loading module for PredictLab."""
 
+import csv
 from pathlib import Path
 
 import pandas as pd
 
 from predictlab.config import get_settings
-from predictlab.data.validate import DataValidationError
+from predictlab.data.validate import DataValidationError, DuplicateColumnsError
 from predictlab.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -56,6 +57,24 @@ def load_raw_dataset(
         msg = f"Raw dataset file is empty (0 bytes): {target_path.resolve()}"
         logger.error(msg)
         raise DataValidationError(msg)
+
+    # Inspect CSV header row directly for duplicate column headers
+    try:
+        with open(target_path, encoding=encoding, newline="") as f:
+            reader = csv.reader(f)
+            header = next(reader, None)
+            if header:
+                duplicate_headers = [col for col in set(header) if header.count(col) > 1]
+                if duplicate_headers:
+                    msg = f"CSV header contains duplicate column names: {sorted(duplicate_headers)}"
+                    logger.error(msg)
+                    raise DuplicateColumnsError(msg)
+    except DuplicateColumnsError:
+        raise
+    except Exception as exc:
+        msg = f"Failed inspecting CSV header for {target_path.resolve()}: {exc}"
+        logger.error(msg)
+        raise DataValidationError(msg) from exc
 
     try:
         df = pd.read_csv(target_path, encoding=encoding)

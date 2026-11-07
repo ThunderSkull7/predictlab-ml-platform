@@ -2,7 +2,7 @@
 
 ## 1. System Overview
 
-PredictLab is engineered as a modular, production-ready predictive analytics platform. It adheres to strict separation of concerns, ensuring machine learning pipelines, data validation, and business logic remain completely decoupled from user presentation interfaces.
+PredictLab is engineered as a modular, production-grade predictive analytics platform. It adheres to strict separation of concerns, ensuring machine learning pipelines, data validation, and business logic remain completely decoupled from user presentation interfaces.
 
 ```mermaid
 graph TD
@@ -12,15 +12,15 @@ graph TD
     end
 
     subgraph Core ML Engine [src/predictlab]
-        C --> D[Preprocessing & Encoders<br/>Phase 3]
-        D --> E[Model Training & Cross-Validation<br/>Phase 4]
-        E --> F[Calibration & Evaluation<br/>Phase 5]
+        C --> D[Preprocessing & Feature Pipelines<br/>Phase 3]
+        D --> E[Model Exploration & Baseline Comparison<br/>Phase 4]
+        E --> F[Probability Calibration & Evaluation<br/>Phase 5]
         F --> G[Serialized Artifacts<br/>models/ & artifacts/]
     end
 
     subgraph Presentation Layer [app/]
         G --> H[Streamlit UI<br/>Phase 6]
-        H --> I[Cohort Analytics]
+        H --> I[Cohort Risk Analytics]
         H --> J[Single-Customer Scoring]
         H --> K[What-If Scenario Simulation]
     end
@@ -49,7 +49,7 @@ predictlab-ml-platform/
 ├── data/
 │   ├── raw/                    # Immutable raw source data
 │   ├── processed/              # Transformed feature sets (git-ignored)
-│   └── README.md               # Data registry & integrity documentation
+│   └── README.md               # Data registry & provenance documentation
 ├── docs/                       # Technical architecture, data dictionaries, ADRs
 │   ├── architecture.md
 │   ├── problem_definition.md
@@ -63,7 +63,7 @@ predictlab-ml-platform/
 │       ├── load.py
 │       └── validate.py
 ├── app/                        # Streamlit web application (Phase 6)
-├── models/                     # Serialized model binaries (.joblib)
+├── models/                     # Serialized model binaries (Phase 4-5)
 ├── artifacts/                  # Serialized transformers, metrics, and figures
 ├── reports/                    # Generated evaluation summaries and figures
 ├── tests/                      # Automated test suite
@@ -90,14 +90,24 @@ predictlab-ml-platform/
 
 ### C. Ingestion & Validation (`predictlab.data.load` & `predictlab.data.validate`)
 - **Immutability**: Ingestion functions return isolated copies, leaving raw source files untouched.
-- **Strict Error Boundaries**: Handles missing files, 0-byte corruptions, and parsing failures gracefully with domain-specific exceptions (`DataValidationError`, `EmptyDatasetError`, etc.).
-- **Pydantic Validation Reports**: Validation functions produce strongly-typed `ValidationResult` objects documenting row counts, schema fidelity, target class distributions, and duplicate rates.
+- **Strict Error Boundaries**: Handles missing files, 0-byte corruptions, duplicate CSV headers, and parsing failures gracefully with domain-specific exceptions (`DataValidationError`, `EmptyDatasetError`, `DuplicateColumnsError`, etc.).
+- **Active Pydantic Validation**: Validation functions produce strongly-typed `ValidationResult` objects with active consistency validation (ensuring validity flags, error lists, and row bounds remain strictly synchronized).
 
 ---
 
-## 4. Separation of ML Logic and User Interface
+## 4. Probabilistic Modeling Terminology & Phased Governance
 
-A critical architectural principle of PredictLab is the **absolute isolation between the ML pipeline and the UI layer**:
-- **No Streamlit Code in `src/predictlab/`**: Core algorithms, data loaders, preprocessors, and inference pipelines must run in headless environments (CLI, CI, scheduled jobs) without any dependency on Streamlit.
-- **No ML Logic in `app/`**: The Streamlit interface acts exclusively as a consumer of `predictlab` APIs and serialized joblib artifacts.
-- **State Isolation**: User interactions in the UI cannot mutate underlying data assets or trained model binaries.
+To avoid methodological ambiguity, PredictLab enforces precise distinctions across model outputs:
+
+1. **Raw Model Scores / Pseudo-Probabilities**: Estimator outputs (e.g., logistic sigmoid or tree fraction scores). Not assumed to represent true empirical event probabilities.
+2. **Empirically Calibrated Probabilities**: Post-processed probabilities validated against true empirical event frequencies. Evaluated in Phase 5 using Brier score, Expected Calibration Error (ECE), and reliability curves.
+3. **Binary Decisions**: Obtained by applying an explicit threshold $\tau \in (0, 1)$, deferred to Phase 5.
+4. **Business Risk Tiers**: Prioritization segments (e.g., Low, Medium, High). Threshold selection is explicitly deferred until actual model outputs and business utility policies are defined in Phase 5.
+
+---
+
+## 5. Separation of ML Logic and User Interface
+
+- **Headless Core (`src/predictlab/`)**: Core data loading, preprocessors, estimators, and inference routines operate independently of Streamlit or any web framework.
+- **UI Consumer (`app/`)**: The Streamlit interface acts solely as an interactive client consuming `predictlab` APIs and serialized joblib artifacts.
+- **State Protection**: User interactions in the UI cannot mutate raw data assets or trained model binaries.

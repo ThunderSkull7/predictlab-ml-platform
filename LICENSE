@@ -23,6 +23,11 @@ SOFTWARE.
 ---
 
 Third-Party Data Notice:
-The Telco Customer Churn dataset included or referenced by this project is derived from
-the IBM Sample Data Sets repository (licensed under the Apache License, Version 2.0).
-Refer to data/README.md for full attribution, license terms, and provenance details.
+The Telco Customer Churn dataset referenced by this project is hosted within an IBM
+open-source code pattern repository (IBM/telco-customer-churn-on-icp4d), where repository
+code is licensed under the Apache License, Version 2.0. However, the repository hosts
+the CSV as a sample asset without a dedicated open-data license (e.g., CDLA, CC-BY, ODbL).
+Redistribution rights cannot be conclusively established from upstream metadata alone.
+Accordingly, PredictLab distinguishes its MIT software license from third-party dataset
+terms, documents this provenance limitation, and provides an automated download and
+integrity verification procedure in data/README.md.

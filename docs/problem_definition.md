@@ -1,67 +1,89 @@
-# Problem Definition: Customer Churn Prediction
+# Problem Definition: Retrospective Customer Churn Classification and Risk Ranking
 
-## 1. Executive Summary & Business Problem
+## 1. Executive Summary & Formulation Scope
 
-Customer attrition ("churn") represents the permanent or extended loss of a subscriber or customer to competitors or natural disengagement. In subscription-based telecommunications, customer acquisition costs typically exceed retention costs by 4x to 7x. Losing existing subscribers erodes recurring revenue, depresses customer lifetime value (LTV), and impairs profitability.
+PredictLab is an experimental predictive analytics platform. For its initial machine learning task, the project utilizes the canonical IBM Telco Customer Churn sample dataset.
 
-When a customer cancels their subscription, the loss is irreversible for that billing cycle. Organizations that rely purely on reactive retention—such as countering cancellation requests at the call center—experience low win-back rates and heavy discount cannibalization.
+Because the underlying data is a single static, cross-sectional table lacking observation timestamps, event logs, or longitudinal customer histories, the initial machine learning task is formally defined as:
 
-PredictLab addresses this challenge through **proactive risk identification**, modeling subscriber behavior to estimate churn probability prior to contract expiration or cancellation triggers.
+> **Retrospective customer churn classification and risk ranking using the available customer snapshot.**
 
-## 2. Why Churn Prediction is Useful
+This formulation establishes a clear methodological boundary: the system models statistical patterns that distinguish accounts that churned from accounts that remained active within a historical observation snapshot. It does **not** claim to provide an operational, production-ready future forecasting system, which would require time-stamped longitudinal records.
 
-1. **Targeted Retention Interventions**: Customer retention budgets are finite. Rather than indiscriminately issuing discounts to healthy accounts, marketing and retention teams can focus interventions (e.g., proactive loyalty incentives, tech support outreach, plan restructuring) on accounts at genuine risk.
-2. **Prioritization by Expected Financial Impact**: By pairing predicted churn probability with customer monthly charges ($P(\text{churn}) \times \text{MonthlyCharges}$), businesses can rank-order at-risk accounts by expected revenue loss.
-3. **Operational Root-Cause Diagnostics**: Model feature attributions allow customer success representatives to identify underlying pain points (e.g., month-to-month contracts without support bundles, payment method frictions).
+---
 
-## 3. Machine Learning Objective
+## 2. Business Context & Analytical Utility
 
-The machine learning task is formulated as a **supervised binary probabilistic classification problem**:
+1. **Retrospective Risk Attribution**: By analyzing the characteristics associated with customer attrition in the historical snapshot, organizations can diagnose structural churn drivers (e.g., month-to-month contracts, specific service bundle configurations, payment method friction).
+2. **Account Risk Ranking**: Supervised classification models produce continuous score rankings that enable stakeholders to prioritize accounts by relative churn propensity rather than treating all customers uniformly.
+3. **Platform Foundation**: Developing this retrospective pipeline establishes the modular architecture, validation tooling, evaluation protocols, and explainability mechanisms required for future deployments on longitudinal, time-stamped datasets.
 
-$$\hat{y}_i = P(Y_i = 1 \mid \mathbf{x}_i)$$
+---
 
-Where:
-- $\mathbf{x}_i$ is the vector of observable customer features for customer $i$ at the evaluation point.
-- $Y_i \in \{0, 1\}$ represents the observed retention outcome over the target evaluation window.
-- $\hat{y}_i \in [0.0, 1.0]$ is the calibrated posterior probability that customer $i$ will churn.
+## 3. Retrospective Classification vs. Genuine Future Forecasting
 
-> [!IMPORTANT]
-> The primary output of PredictLab is a **well-calibrated probability score** alongside decile risk bands, not merely a thresholded binary label. Binary classification thresholds ($\tau = 0.5$) discard uncertainty and prevent cost-sensitive business trade-offs.
+A rigorous distinction must be maintained between the current retrospective task and prospective future forecasting:
+
+| Dimension | Retrospective Snapshot Classification (Current) | Prospective Future Forecasting (Production Ideal) |
+|---|---|---|
+| **Data Structure** | Static cross-sectional table (single row per customer account). | Longitudinal event logs or periodic panel snapshots ($T_0, T_1, \dots$). |
+| **Prediction Timestamp ($T_0$)** | **Absent / Unverified**. No exact calendar date or billing cutoff is recorded. | **Explicitly Defined**. State features are measured strictly at or before $T_0$. |
+| **Prediction Horizon ($\Delta t$)** | **Undefined**. Outcomes reflect historical status without an explicit future window. | **Strictly Validated** (e.g., probability of churn within 30, 60, or 90 days after $T_0$). |
+| **Temporal Ordering** | Features and outcome are observed simultaneously in the snapshot. | Strictly causal: features precede the outcome observation window. |
+| **Operational Applicability** | Exploratory diagnostic modeling and relative risk ranking. | Real-time / batch operational scoring for prospective retention campaigns. |
+
+> [!WARNING]
+> Because the dataset contains no timestamps or historical snapshot sequences, out-of-time (OOT) validation cannot be performed on this dataset. Offline performance metrics reflect cross-sectional discriminatory power, not validated temporal generalization across future calendar periods.
+
+---
 
 ## 4. Formal Problem Specification
 
-| Dimension | Specification |
-|---|---|
-| **Unit of Prediction** | Individual customer subscription account (identified by `customerID`). |
-| **Prediction Point** | At the billing cycle close, before renewal or cancellation actions. |
-| **Prediction Target** | `Churn` (categorical: `"Yes"` vs `"No"`). |
-| **Positive Class ($Y=1$)** | `"Yes"`: The customer terminated their contract/service. |
-| **Negative Class ($Y=0$)** | `"No"`: The customer maintained an active subscription. |
-| **Model Output** | Calibrated probability $\hat{p} \in [0, 1]$, risk tier (`Low`, `Medium`, `High`, `Critical`), and top contributing risk factors. |
-| **Optimization Metrics** | Area Under the Precision-Recall Curve (PR-AUC), Brier Score, ROC-AUC, and Expected Value Optimization under asymmetric costs. |
+- **Unit of Analysis**: Individual customer subscription account (identified by `customerID`).
+- **Input Features**: Vector $\mathbf{x}_i \in \mathbb{R}^d$ of 19 demographic, service, and billing attributes available in the cross-sectional record.
+- **Target Variable**: `Churn` (documented in IBM metadata as denoting customers who discontinued service within the preceding month).
+  - **Negative Class ($Y = 0$)**: `"No"` (retained customer accounts, $N = 5,174$, 73.46%).
+  - **Positive Class ($Y = 1$)**: `"Yes"` (churned customer accounts, $N = 1,869$, 26.54%).
 
-## 5. Intended Users & Stakeholders
+---
 
-- **Retention Marketing Managers**: To design targeted loyalty offers and promotional campaigns for cohorts in the upper risk deciles.
-- **Customer Success / Support Specialists**: To review customer risk profiles during inbound or outbound support calls and apply proactive service remediation.
-- **Executive Leadership / RevOps**: To monitor portfolio-level churn velocity, aggregate revenue-at-risk, and assess retention program effectiveness.
+## 5. Model Output Terminology & Governance
 
-## 6. Expected Application Use Cases
+To maintain scientific precision, PredictLab strictly distinguishes four levels of model output:
 
-1. **Proactive Campaign Targeting**: Weekly/monthly batch scoring to identify high-risk customer cohorts for automated email campaigns or loyalty reward credits.
-2. **Interactive Customer Health Inspection**: An interactive dashboard (Streamlit UI in Phase 6) enabling customer service teams to look up an account, view its predicted churn probability, understand key risk drivers, and simulate retention scenarios ("What if contract length is extended to 1 year?").
-3. **Cohort Risk Segmentation**: Aggregating accounts by tenure, contract type, and service bundles to pinpoint systemic service vulnerabilities (e.g., fiber optic customers lacking tech support).
+```mermaid
+graph LR
+    A[Raw Model Score / Pseudo-Probability<br/>f_x in 0, 1] --> B[Empirically Calibrated Probability<br/>P_hat in 0, 1]
+    B --> C[Binary Classification Decision<br/>Y_hat in 0, 1 via threshold tau]
+    B --> D[Business Risk Tier<br/>Rank-ordered priority tiers]
+```
 
-## 7. Assumptions & Limitations
+1. **Raw Model-Estimated Score / Pseudo-Probability ($\hat{s}_i \in [0, 1]$)**:
+   - The uncalibrated continuous output produced directly by an estimator (e.g., tree ensemble leaf fractions, logistic sigmoid outputs).
+   - Raw scores frequently suffer from systematic distortion (e.g., over-confidence in boosted trees or compression in support vector machines).
+2. **Empirically Calibrated Probability ($\hat{p}_i = P(Y_i = 1 \mid \hat{s}_i)$)**:
+   - A probability score whose empirical reliability has been demonstrated and verified on held-out validation data (such that of accounts assigned $\hat{p} \approx 0.70$, approximately 70% actually churned).
+   - **Phase 1 Status**: **No model has yet been trained or calibrated**. Model outputs will not be designated as "calibrated" until empirical calibration methods (e.g., Platt scaling, isotonic regression) and diagnostic tools (Brier score, Expected Calibration Error, reliability curves) are evaluated in Phase 5.
+3. **Binary Classification Decision ($\hat{Y}_i \in \{0, 1\}$)**:
+   - Discretized decision obtained by applying an explicit decision threshold $\tau \in (0, 1)$ to model probabilities.
+   - Threshold selection is deferred to Phase 5 and will be optimized against asymmetric business misclassification costs rather than arbitrarily defaulting to $\tau = 0.5$.
+4. **Business Risk Tiers**:
+   - Categorical risk groupings (e.g., Low, Medium, High, Critical) designed to segment customers for targeted operational treatment.
+   - **Phase 1 Status**: Risk-tier threshold boundaries are **explicitly deferred**. No speculative cutoffs will be invented until empirical score distributions and a concrete business cost-benefit utility policy are established in Phase 5.
 
-### Probabilistic Nature & Absence of Certainty
-- Predictions represent statistical likelihoods, not certain futures. A customer with $\hat{p} = 0.85$ has an 85% estimated likelihood of churn under historical behavior; individual decisions remain subject to external events.
+---
 
-### Correlation vs. Causation
-- The machine learning model identifies statistical associations, not causal mechanisms. For example, customers on month-to-month contracts exhibit high churn rates, but contract type may simply be a proxy for lower initial commitment rather than the root cause. Interventions must be designed with domain judgment.
+## 6. Intended Stakeholders & Use Cases
 
-### Temporal Horizon & Snapshot Limitations
-- The IBM Telco dataset is a cross-sectional snapshot containing aggregated features (`tenure`, `MonthlyCharges`, `TotalCharges`) rather than longitudinal event streams. The exact observation window prior to churn is fixed by dataset construction.
+- **Retention & Customer Success Analysts**: To inspect historical subscriber segments exhibiting elevated churn frequency and identify service configuration vulnerabilities.
+- **Data Science Practitioners**: To benchmark classification algorithms, compare probabilistic calibration techniques, and audit feature attributions on a standardized dataset.
+- **Platform Architecture Evaluation**: To demonstrate an end-to-end, reproducible ML pipeline that enforces strict separation between data ingestion, validation, modeling, and user presentation.
 
-### Data Stationarity
-- The model assumes the relationship between customer characteristics and churn remains stationary over time. Macroeconomic shifts, competitive pricing changes, or service disruptions may cause concept drift requiring model recalibration.
+---
+
+## 7. Methodological Limitations & Assumptions
+
+1. **Absence of Historical Sequences**: The dataset reflects a single snapshot. Changes in customer behavior over time (e.g., usage drops, escalating support calls) cannot be captured.
+2. **Correlation vs. Causation**: Statistical associations identified by classifiers do not imply causal relationships. Interventions (e.g., forcing a 2-year contract) cannot assume the churn reduction suggested by observational correlation.
+3. **Stationarity Assumption**: Applying a snapshot-trained model to future operational data assumes that subscriber behavior, market competitors, and pricing structures remain stationary.
+4. **Survivorship Bias**: Customers with longer `tenure` represent accounts that have already survived high early-lifecycle hazard rates. Without longitudinal cohort tracking, this survivorship dynamic cannot be disentangled from genuine retention loyalty.

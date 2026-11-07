@@ -54,3 +54,14 @@ def test_load_corrupted_csv_raises_error(tmp_path: Path):
 
     with pytest.raises(DataValidationError):
         load_raw_dataset(file_path=file_path)
+
+
+def test_load_csv_with_duplicate_headers_raises_error(tmp_path: Path):
+    """Verify CSV file containing duplicate header names raises DuplicateColumnsError."""
+    from predictlab.data.validate import DuplicateColumnsError
+
+    file_path = tmp_path / "dupe_header.csv"
+    file_path.write_text("colA,colB,colA\n1,2,3\n", encoding="utf-8")
+
+    with pytest.raises(DuplicateColumnsError, match="duplicate column names"):
+        load_raw_dataset(file_path=file_path)
