@@ -25,6 +25,7 @@ from predictlab.thresholding.risk_tiers import RiskTierer
 logger = get_logger(__name__)
 
 CANONICAL_ARTIFACT_FILENAME = "model_phase5_calibrated.joblib"
+CANONICAL_ARTIFACT_SHA256 = "b773eb58e59825c8cef7169c4166566ebddfa77b5e584853ac492dafc5dd0963"
 EXPECTED_FEATURE_COUNT = 47
 EXPECTED_CALIBRATION_METHOD = "sigmoid"
 EXPECTED_ENSEMBLE_SIZE = 5
@@ -52,6 +53,7 @@ class InferenceEngine:
         enable_explanations: bool = True,
         require_calibrated: bool = True,
         allow_development_fallback: bool = False,
+        expected_sha256: str | None = None,
     ) -> None:
         """Initialize the inference engine by loading and validating a serialized model artifact.
 
@@ -70,6 +72,9 @@ class InferenceEngine:
             Whether to enforce strict calibrated ensemble constraints (5 estimators, sigmoid, 47 features).
         allow_development_fallback : bool, default=False
             Isolated development switch. Must NEVER be True in production paths.
+        expected_sha256 : str | None, optional
+            Explicit expected SHA-256 checksum to enforce. If omitted, defaults to
+            the canonical calibrated checksum when loading the production model.
         """
         self._require_calibrated = require_calibrated
         self._artifact_path = self._resolve_artifact_path(
@@ -79,6 +84,7 @@ class InferenceEngine:
         self._model, self._metadata, self._artifact_sha256 = self._load_and_validate_artifact(
             self._artifact_path,
             require_calibrated=require_calibrated,
+            expected_sha256=expected_sha256,
         )
 
         # Set decision threshold
@@ -168,6 +174,7 @@ class InferenceEngine:
         self,
         path: Path,
         require_calibrated: bool = True,
+        expected_sha256: str | None = None,
     ) -> tuple[Any, dict[str, Any], str]:
         """Load joblib bundle, compute checksum, and perform rigorous structural validation.
 
@@ -177,6 +184,8 @@ class InferenceEngine:
             Path to the joblib bundle.
         require_calibrated : bool, default=True
             Whether to enforce strict calibrated ensemble constraints.
+        expected_sha256 : str | None, optional
+            Expected SHA-256 checksum to strictly enforce before deserialization.
 
         Returns
         -------
@@ -186,9 +195,9 @@ class InferenceEngine:
         Raises
         ------
         ModelArtifactError
-            If file is unreadable, corrupted, or violates structural contracts.
+            If file is unreadable, corrupted, violates structural contracts, or fails checksum verification.
         """
-        # 1. Compute SHA-256 Checksum
+        # 1. Compute SHA-256 Checksum from raw file bytes
         try:
             artifact_bytes = path.read_bytes()
             sha256_hash = hashlib.sha256(artifact_bytes).hexdigest()
@@ -197,7 +206,21 @@ class InferenceEngine:
                 f"Failed to read model artifact '{path.name}' for checksum verification: {err}"
             ) from err
 
-        # 2. Deserialize Bundle
+        # 2. Strict Checksum Verification BEFORE Deserialization
+        target_sha256 = expected_sha256
+        if target_sha256 is None and path.name == CANONICAL_ARTIFACT_FILENAME:
+            settings = get_settings()
+            target_sha256 = getattr(settings, "canonical_model_sha256", CANONICAL_ARTIFACT_SHA256)
+
+        if target_sha256 is not None:
+            if sha256_hash.lower() != target_sha256.lower():
+                raise ModelArtifactError(
+                    f"Model artifact '{path.name}' checksum mismatch. "
+                    f"Expected SHA-256 '{target_sha256}', but computed '{sha256_hash}'. "
+                    "Refusing to deserialize unverified or tampered model artifact."
+                )
+
+        # 3. Safe Deserialization (Only reached after checksum verification succeeds)
         try:
             bundle = joblib.load(path)
         except Exception as err:

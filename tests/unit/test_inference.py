@@ -229,11 +229,41 @@ def test_canonical_artifact_missing_fails_closed(monkeypatch: pytest.MonkeyPatch
 
 def test_canonical_artifact_unreadable_or_corrupted_fails(tmp_path: Path) -> None:
     """Requirement 3.3: Canonical artifact unreadable or corrupted: initialization fails."""
+    # 1. Corrupted file with canonical name fails checksum mismatch before deserialization
     corrupt_file = tmp_path / "model_phase5_calibrated.joblib"
     corrupt_file.write_bytes(b"CORRUPTED_NON_JOBLIB_DATA_12345")
-
-    with pytest.raises(ModelArtifactError, match="Failed to deserialize model artifact"):
+    with pytest.raises(ModelArtifactError, match="checksum mismatch"):
         InferenceEngine(model_artifact_path=corrupt_file)
+
+    # 2. Corrupted custom file with disabled calibration requirement fails during deserialization
+    corrupt_custom = tmp_path / "corrupt_custom.joblib"
+    corrupt_custom.write_bytes(b"INVALID_PICKLE_STREAM")
+    with pytest.raises(ModelArtifactError, match="Failed to deserialize model artifact"):
+        InferenceEngine(model_artifact_path=corrupt_custom, require_calibrated=False)
+
+
+def test_artifact_checksum_mismatch_fails_before_deserialization(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Requirement 1: Modified artifact cannot pass validation and is rejected before joblib.load()."""
+    tampered_file = tmp_path / "model_phase5_calibrated.joblib"
+    tampered_file.write_bytes(b"TAMPERED_ARTIFACT_CONTENT")
+
+    # Spy on joblib.load to verify it is NEVER called when checksum fails
+    load_called = False
+
+    def mock_load(path: Path) -> dict:
+        nonlocal load_called
+        load_called = True
+        return {}
+
+    monkeypatch.setattr(joblib, "load", mock_load)
+
+    with pytest.raises(ModelArtifactError, match="checksum mismatch"):
+        InferenceEngine(model_artifact_path=tampered_file)
+
+    assert not load_called, "joblib.load() was invoked despite checksum mismatch!"
 
 
 def test_uncalibrated_model_joblib_not_loaded_when_canonical_missing(

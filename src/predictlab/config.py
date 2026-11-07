@@ -55,6 +55,10 @@ class Settings(BaseSettings):
     models_dir_name: str = Field(default="models", description="Models directory name")
     artifacts_dir_name: str = Field(default="artifacts", description="Artifacts directory name")
     reports_dir_name: str = Field(default="reports", description="Reports directory name")
+    canonical_model_sha256: str = Field(
+        default="b773eb58e59825c8cef7169c4166566ebddfa77b5e584853ac492dafc5dd0963",
+        description="Expected SHA-256 checksum of the canonical calibrated model artifact",
+    )
 
     # Dataset Parameters
     raw_dataset_filename: str = Field(
