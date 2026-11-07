@@ -245,12 +245,39 @@ PredictLab is developed following a rigorous 7-phase engineering plan:
   - Serialized production artifact `artifacts/model_phase5_calibrated.joblib`; preserved approved Phase 4 model at `artifacts/model_phase4.joblib`.
   - Four dedicated Phase 5 markdown reports and executed `notebooks/05_evaluation_explainability_and_inference.ipynb`.
   - 126 passing automated unit and integration tests (100% pass rate) and clean Ruff static analysis.
-- [ ] **Phase 6: Interactive Dashboard & Explainable Inference UI**
+- [x] **Phase 6: Production-Quality Streamlit Application**
+  - Modular multipage Streamlit interface (`app.py`, `app_pages/`, `src/predictlab/app/`) integrated directly with the production `InferenceEngine`.
+  - **Page 1 — Overview Dashboard**: Verified source dataset statistics (7,043 records, 26.54% churn prevalence), approved 5-fold CV performance benchmarks (Average Precision 0.6684, ROC-AUC 0.8495), cost-sensitive threshold shift ($\tau^* = 0.19$, saving $20.75\%$ / $\$96,900$), and risk tier distribution.
+  - **Page 2 — Single Customer Prediction**: Interactive form with the exact 19 raw domain predictors, representative subscriber profile presets, operating decision threshold slider, calibrated probability estimation, decoupled risk tier queue assignment, and local TreeSHAP attribution on the averaged base decision margin.
+  - **Page 3 — Batch Customer Analysis**: CSV cohort upload with template download, per-record schema validation diagnostics capturing invalid rows without pipeline termination, vectorized scoring preserving original row ordering, risk tier donut chart, filterable results table, and full CSV exports.
+  - **Page 4 — Model Insights & Explainability**: Ranked 5-fold cross-validated permutation importance chart with uncertainty bars, TreeSHAP ensemble log-odds attribution methodology with exact additivity guarantee ($2.2 \times 10^{-16}$), risk tier calibration table, and interactive threshold decoupling simulator.
+  - **Page 5 — Methodology & Governance**: Comprehensive transparent documentation covering cross-sectional classification framing, dataset lineage and SHA-256 validation, leakage-free 47-feature baseline preprocessing, model selection, calibration rules, 4-term cost modeling, and explicit limitations (unverified historical 21-case narrative discrepancy, strict holdout test isolation, and non-causal guidance).
+  - Automated application test suite with 144 passing tests (100% pass rate) and clean Ruff static analysis.
 - [ ] **Phase 7: Packaging, Verification & Production Readiness**
 
 ---
 
-## 6. Setup & Installation (Windows 11 / Cross-Platform)
+## 6. Launching the Streamlit Application
+
+Launch the interactive analytical platform locally using Streamlit:
+
+```powershell
+# Launch Streamlit web dashboard
+streamlit run app.py
+```
+
+The application will initialize at `http://localhost:8501`, automatically loading the cached canonical Phase 5 calibrated model artifact (`artifacts/model_phase5_calibrated.joblib`).
+
+### Application Features & Pages:
+1. **📊 Overview Dashboard**: Macro view of dataset parameters, cross-validation metrics, cost curve savings, and risk distributions.
+2. **👤 Single Customer Prediction**: Real-time scoring for individual subscribers with profile presets, threshold slider, risk badge, and local TreeSHAP attributions.
+3. **📁 Batch Customer Analysis**: High-throughput CSV file upload, automated per-record validation, portfolio risk donut chart, and scored CSV export.
+4. **🔍 Model Insights & Explainability**: Global permutation importance with error bars, SHAP properties, and interactive threshold vs risk tier simulator.
+5. **📖 Methodology & Governance**: Complete scientific audit trail, data lineage, calibration protocols, and explicit scope limitations.
+
+---
+
+## 7. Setup & Installation (Windows 11 / Cross-Platform)
 
 ### 1. Prerequisites
 - Python 3.12.10 installed on your system.
