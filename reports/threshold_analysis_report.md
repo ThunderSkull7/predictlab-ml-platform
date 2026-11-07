@@ -56,29 +56,53 @@ The table below contrasts key threshold operating points evaluated on the calibr
    - The precision-weighting **F0.5-Score** ($F_{0.5}$) peaks at **$\tau = 0.49$** ($F_{0.5} = 0.6432$).
 3. **Balanced Accuracy**: Balanced accuracy peaks at $\tau = 0.28$ with a score of **$0.7695$** ($76.95\%$).
 
-### 2.3 Historical Reconciliation: Original Phase 5 vs Authoritative Phase 5.1 Results
+### 2.3 Historical Reconciliation: Original Phase 5 vs Reproduced Uncalibrated vs Authoritative Calibrated Results
 
-A key audit objective in Phase 5.1.1 was reconciling the difference in confusion matrix counts at the default threshold ($\tau = 0.50$):
-- **Original Phase 5 Draft Report**: Recorded $\text{TP} = 782$, $\text{FP} = 410$, $\text{FN} = 713$, $\text{TN} = 3,729$ ($\text{Recall} = 52.31\%$, $\text{Precision} = 65.60\%$).
-- **Phase 5.1 Authoritative Implementation**: Records $\text{TP} = 798$, $\text{FP} = 387$, $\text{FN} = 697$, $\text{TN} = 3,752$ ($\text{Recall} = 53.38\%$, $\text{Precision} = 67.34\%$).
-- Both matrices strictly account for all $N = 5,634$ records ($1,495$ actual churners and $4,139$ actual retained subscribers).
+A key audit objective in Phase 5.1.1 and Phase 5.1.2 was reconciling the difference in confusion matrix counts at the default threshold ($\tau = 0.50$):
 
-#### Exact Root Cause Analysis
-1. **Probability Calibration Status**:
-   - The original draft report narrative and table manually incorporated out-of-fold confusion counts from the **uncalibrated** tuned baseline model (`HistGradientBoostingClassifier`), where $\text{Recall} = 52.31\%$ ($782 / 1,495$) and $\text{FN} = 1,495 - 782 = 713$.
-   - In contrast, the code pipeline (`scripts/run_phase5_experiments.py`) evaluated threshold performance on `calib_results['sigmoid'][1]`, the **Sigmoid (Platt) calibrated** out-of-fold probabilities.
-   - When Sigmoid calibration rescales raw margins into empirically aligned probabilities, the probability distribution shifts slightly toward empirical cohort frequencies. At $\tau = 0.50$, this reclassification correctly captures an additional 16 true churners ($\text{TP}: 782 \to 798$), reducing false negatives ($\text{FN}: 713 \to 697$) and false positives ($\text{FP}: 410 \to 387$).
-2. **Artifact vs Narrative Divergence**:
-   - Inspection of commit `06201e1` confirmed that the machine-generated CSV artifact [`threshold_cost_analysis.csv`](file:///d:/Project/Predictive%20Analytics%20Platform/reports/experiments/threshold_cost_analysis.csv) **already contained the calibrated counts** ($\text{TP} = 798, \text{FP} = 387, \text{FN} = 697, \text{TN} = 3,752$) from its initial execution.
-   - The discrepancy existed solely because the initial Markdown narrative draft had transcribed counts from the uncalibrated Phase 4 cross-validation summary.
-3. **Reproducibility of Both Sets of Results**:
-   - Both results were directly reproduced from repository artifacts without modifying parameters or data splits:
-     - Evaluating `(uncalibrated_oof_probs >= 0.50)` yields: $\text{TP} = 782, \text{FP} = 389, \text{FN} = 713, \text{TN} = 3,750$.
-     - Evaluating `(sigmoid_calibrated_oof_probs >= 0.50)` yields: $\text{TP} = 798, \text{FP} = 387, \text{FN} = 697, \text{TN} = 3,752$.
-4. **Authoritative Designation**:
-   - The **Sigmoid-calibrated results** ($\text{TP} = 798, \text{FP} = 387, \text{FN} = 697, \text{TN} = 3,752$) are designated as **authoritative** for Phase 5 and Phase 5.1. They represent the actual operational behavior of the deployed calibrated pipeline, align with all serialized CSVs, and form the basis for risk tiering.
+#### 2.3.1 Confusion Matrix Comparison Across Evaluations
+
+The table below contrasts all three evaluations side-by-side on the training cohort ($N = 5,634$):
+
+| Metric | Original Phase 5 Narrative Draft | Reproduced Uncalibrated OOF | Calibrated OOF (Phase 5.1 Authoritative) | Discrepancy (Narrative vs Reproduced Uncal) |
+|---|---:|---:|---:|---:|
+| True Positives ($\text{TP}$) | 782 | 782 | 798 | 0 |
+| False Negatives ($\text{FN}$) | 713 | 713 | 697 | 0 |
+| **Total Positive Churners ($N_+$)** | **1,495** | **1,495** | **1,495** | **0** |
+| False Positives ($\text{FP}$) | 410 | 389 | 387 | +21 |
+| True Negatives ($\text{TN}$) | 3,729 | 3,750 | 3,752 | -21 |
+| **Total Negative Retained ($N_-$)** | **4,139** | **4,139** | **4,139** | **0** |
+| **Total Cohort Sample Size ($N$)** | **5,634** | **5,634** | **5,634** | **0** |
+| Recall ($\text{TPR}$) | 52.31% | 52.31% | 53.38% | 0.00% |
+| Precision ($\text{PPV}$) | 65.60% | 66.78% | 67.34% | -1.18% |
+| Specificity ($\text{TNR}$) | 90.09% | 90.60% | 90.65% | -0.51% |
+| Balanced Accuracy | 71.20% | 71.46% | 72.01% | -0.26% |
+| F1-Score | 0.5820 | 0.5866 | 0.5955 | -0.0046 |
+
+*Note: All three confusion matrices satisfy exact sample conservation: $\text{TP} + \text{FP} + \text{FN} + \text{TN} = 1,495 + 4,139 = 5,634$.*
+
+#### 2.3.2 Exact Provenance Analysis & Findings
+
+1. **Positive Class Origin (Exact Match)**:
+   - $\text{TP} = 782$ and $\text{FN} = 713$ are **identical** between the original Phase 5 narrative draft and the reproduced uncalibrated cross-validation predictions ($\text{Recall} = 782 / 1,495 = 52.31\%$).
+   - This identity definitively establishes that the positive class counts in the original report narrative originated directly from the uncalibrated cross-validation predictions of the tuned `HistGradientBoostingClassifier` baseline from Phase 4.
+
+2. **Negative Class 21-Observation Discrepancy ($\text{FP}: 410 \text{ vs } 389, \text{TN}: 3,729 \text{ vs } 3,750$)**:
+   - The original narrative draft and the reproduced uncalibrated OOF differ by exactly 21 observations strictly confined to the negative class: 21 additional false positives ($410$ vs $389$) and 21 fewer true negatives ($3,729$ vs $3,750$).
+   - An exhaustive empirical audit was conducted across all candidate models (Logistic Regression L1/L2, Random Forest variants, HistGradientBoosting default/balanced/tuned), random seeds, data split orders, and pipeline configurations. No committed code, script, or serialized artifact in the repository generates the pair $\text{FP} = 410, \text{TN} = 3,729$ in combination with $\text{TP} = 782, \text{FN} = 713$.
+   - In commit `06201e1`, the serialized machine-generated CSV artifact [`reports/experiments/threshold_cost_analysis.csv`](file:///d:/Project/Predictive%20Analytics%20Platform/reports/experiments/threshold_cost_analysis.csv) already contained the Sigmoid-calibrated counts ($\text{TP} = 798, \text{FP} = 387, \text{FN} = 697, \text{TN} = 3,752$) from its initial execution.
+   - **Conclusion**: The 21-observation negative-class discrepancy did not arise from an identifiable pipeline code change or committed data artifact. Instead, it reflects an **unverified manual transcription or early exploratory draft artifact** (such as an early manual threshold calculation or intermediate sweep before final cross-validation freezing) whose exact numerical provenance cannot be definitively reconstructed from empirical artifacts in the repository. In accordance with strict scientific integrity principles, this negative-class discrepancy is explicitly documented as historically unverified.
+
+3. **Probability Calibration Effect**:
+   - Rescaling raw decision margins into empirical probabilities via Sigmoid (Platt) calibration aligns the score distribution with observed cohort base rates.
+   - At the default threshold ($\tau = 0.50$), this probability rescaling correctly reclassifies 16 additional true churners ($\text{TP}: 782 \to 798$), reducing false negatives ($\text{FN}: 713 \to 697$) and eliminating 2 false positives ($\text{FP}: 389 \to 387$), increasing true negatives ($\text{TN}: 3,750 \to 3,752$).
+
+4. **Authoritative Evaluation Designation**:
+   - The **Sigmoid-calibrated out-of-fold matrix** ($\text{TP} = 798, \text{FP} = 387, \text{FN} = 697, \text{TN} = 3,752$) is reaffirmed as the **sole authoritative and fully reproducible evaluation basis** for Phase 5.
+   - This matrix represents the true operational performance of the deployed calibrated pipeline, aligns with all serialized experiment CSVs, and serves as the mathematical foundation for cost curve optimization and operational risk tiering.
+
 5. **Holdout Set Isolation**:
-   - The canonical holdout test partition ($N = 1,409$) remained strictly isolated and untouched throughout both analyses. Zero holdout labels were consulted.
+   - The canonical holdout test partition ($N = 1,409$) remained strictly isolated and untouched throughout all calibration and threshold analyses. Zero holdout labels were consulted.
 
 ---
 
