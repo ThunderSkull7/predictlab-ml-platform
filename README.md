@@ -77,7 +77,7 @@ PredictLab rigorously separates four distinct layers of statistical outputs:
                                              ▼
 ┌─────────────────────────────────────────────────────────────────────────────────────────┐
 │ 1. Empirically Calibrated Probability:  p_hat_i = P(Y=1 | s_i)  in [0, 1]               │
-│    (Sigmoid / Platt scaling cut ECE from 0.0463 to 0.0265; Brier score: 0.1335)         │
+│    (Sigmoid / Platt scaling; Brier score: 0.1335; Quantile ECE: 0.0265)                 │
 └──────────────────────────┬───────────────────────────────────────────┬──────────────────┘
                            │                                           │
                            ▼                                           ▼
@@ -111,7 +111,7 @@ flowchart TD
 
     subgraph ModelLayer ["3. Ensemble & Calibration Engine"]
         Med & OHE & Scaler --> HGB["5-Fold HistGradientBoosting Ensemble"]
-        HGB --> Platt["Platt Sigmoid Calibration (ECE = 0.0265)"]
+        HGB --> Platt["Platt Sigmoid Calibration (Quantile ECE = 0.0265)"]
     end
 
     subgraph DecisionLayer ["4. Decision Policy & Explainability"]
@@ -179,13 +179,13 @@ The negligible generalization gap confirms the absence of data leakage or split-
 
 Raw gradient boosting scores often suffer from sigmoid distortion, producing misaligned probability estimates. We evaluated Platt Sigmoid Scaling and Isotonic Regression via 5x5 nested cross-validation:
 
-| Method | Brier Score (↓) | Log Loss (↓) | PR-AUC | ROC-AUC | Expected Calibration Error (ECE) (↓) |
-|---|---|---|---|---|---|
-| Uncalibrated Raw Model | 0.1340 ± 0.0055 | 0.4140 ± 0.0135 | 0.6684 ± 0.0218 | 0.8495 ± 0.0123 | 0.0463 |
-| **Sigmoid (Platt) Scaling** | **0.1335 ± 0.0056** | **0.4116 ± 0.0133** | **0.6697 ± 0.0215** | **0.8498 ± 0.0123** | **0.0265** |
-| Isotonic Regression | 0.1362 ± 0.0061 | 0.4285 ± 0.0152 | 0.6620 ± 0.0220 | 0.8445 ± 0.0130 | 0.0312 |
+| Method | Brier Score (↓) | Log Loss (↓) | PR-AUC (↑) | ROC-AUC (↑) | ECE Quantile (10 bins, ↓) | ECE Uniform (10 bins, ↓) |
+|---|---|---|---|---|---|---|
+| Uncalibrated Raw Model | 0.1337 ± 0.0055 | 0.4121 ± 0.0133 | 0.6684 ± 0.0218 | 0.8495 ± 0.0123 | 0.0237 ± 0.0090 | 0.0263 ± 0.0070 |
+| **Sigmoid (Platt) Scaling** | **0.1335 ± 0.0056** | **0.4116 ± 0.0133** | **0.6697 ± 0.0264** | **0.8498 ± 0.0124** | **0.0265 ± 0.0055** | **0.0295 ± 0.0047** |
+| Isotonic Regression | 0.1338 ± 0.0059 | 0.4181 ± 0.0120 | 0.6669 ± 0.0296 | 0.8494 ± 0.0136 | 0.0299 ± 0.0052 | 0.0289 ± 0.0081 |
 
-**Sigmoid calibration was selected as champion**: it reduced Expected Calibration Error by **42.8%** (from 0.0463 to 0.0265) while strictly preserving ranking metrics. The production artifact comprises a 5-fold ensemble averaging calibrated probability outputs.
+**Sigmoid calibration was selected as champion**: it achieved strictly proper scoring rule optimization across 5-fold cross-validation by reducing Brier Score from 0.1337 to 0.1335 and Log Loss from 0.4121 to 0.4116, while preserving discriminative ranking (PR-AUC: 0.6697, ROC-AUC: 0.8498) and producing monotonic, well-behaved probability estimates (Quantile ECE = 0.0265). In contrast, non-parametric isotonic regression overfit on small bin counts, deteriorating Brier Score (0.1338) and Log Loss (0.4181). The production artifact comprises a 5-fold ensemble averaging calibrated probability outputs.
 
 ---
 
@@ -207,9 +207,9 @@ Evaluating 81 threshold candidates ($\tau \in [0.10, 0.90]$) across the 5,634 tr
 | Default $\tau = 0.50$ | 798 | 387 | 697 | 3,752 | 46.6% | $467,000 | Baseline (0.0%) |
 | **Cost-Optimal $\tau^* = 0.19$** | **1,304** | **1,496** | **191** | **2,643** | **12.8%** | **$370,100** | **-20.75% ($96,900 Saved)** |
 
-*Reconciliation Note*: In a simplified 2-term misclassification model ($\text{Cost} = 500 \cdot FN + 100 \cdot FP$), the optimal threshold shifts to $\tau^* = 0.18$, yielding a 38.20% (\$147,900) cost reduction. PredictLab defaults to the 4-term operational model to realistically budget customer outreach costs.
+> **Illustrative cost scenario:** 20.75% modeled cost reduction ($96,900), based on hypothetical cost assumptions ($C_{\text{FN}}=\$500, C_{\text{FP}}=\$100, C_{\text{TP}}=\$100, C_{\text{TN}}=\$0$) and training out-of-fold predictions ($N=5,634$, modeled cost drops from $467,000 to $370,100, or $65.69/customer across the cohort). This does not represent realized business profits, actual operational savings, or guaranteed future business results.
 
-*Simulation & Modeling Disclaimer*: Modeled financial figures and percentage cost reductions represent simulated expected-cost outcomes under stated hypothetical business utility parameters across the historical training cohort. They do not constitute guarantees of realized business profits, actual operational savings, or forward-looking financial outcomes.
+*Reconciliation Note*: In a simplified 2-term misclassification model ($\text{Cost} = 500 \cdot FN + 100 \cdot FP$), the optimal threshold shifts to $\tau^* = 0.18$, yielding an illustrative 38.20% (\$147,900) cost reduction. PredictLab defaults to the 4-term operational model to realistically budget customer outreach costs.
 
 ---
 
@@ -368,7 +368,7 @@ predictlab-ml-platform/
 ### 2. Environment Setup
 ```bash
 # Clone the repository
-git clone https://github.com/predictlab/predictlab-ml-platform.git
+git clone https://github.com/ThunderSkull7/predictlab-ml-platform.git
 cd predictlab-ml-platform
 
 # Create and activate virtual environment
@@ -473,7 +473,7 @@ print(f"Top Churn Driver: {result.explanation['top_churn_drivers'][0]['feature']
 - [x] **Phase 4: Model Exploration, Baseline Establishment & Controlled Tuning**
   - 5-fold CV evaluation, experimental feature ablation (47-feature victory), hyperparameter tuning, and single protected holdout evaluation.
 - [x] **Phase 5: Probability Calibration, Threshold Tuning, Explainability & Production Inference**
-  - Platt sigmoid calibration, 4-term cost modeling ($\tau^* = 0.19$, saving 20.75%), risk tier decoupling, 5-fold ensemble TreeSHAP attributions, and production InferenceEngine.
+  - Platt sigmoid calibration, 4-term cost modeling ($\tau^* = 0.19$, illustrative cost reduction: 20.75%), risk tier decoupling, 5-fold ensemble TreeSHAP attributions, and production InferenceEngine.
 - [x] **Phase 6: Production-Quality Streamlit Application**
   - 5-page interactive web application, fail-closed artifact loading, TOCTOU vulnerability elimination, in-memory verified-bytes deserialization, and comprehensive integration testing.
 - [x] **Phase 7: Final Quality Assurance, Security Audit & Publication Readiness**

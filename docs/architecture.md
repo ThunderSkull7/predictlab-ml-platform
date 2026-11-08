@@ -188,7 +188,7 @@ To avoid methodological ambiguity, PredictLab enforces precise distinctions acro
 
 1. **Model-Estimated Class Probabilities (Uncalibrated)**: Raw classifier outputs (e.g. tree fraction scores). Lower log loss reflects superior proper scoring rather than empirical calibration.
 2. **Empirically Calibrated Probabilities (Phase 5)**: Post-processed probabilities validated against true empirical event frequencies using Sigmoid (Platt) scaling, verified via Brier score ($0.1335$), Log Loss ($0.4116$), and reliability diagrams. Evaluated via a 5-fold bagging ensemble.
-3. **Binary Decisions (Phase 5)**: Derived by applying an explicit, cost-optimized threshold ($\tau^* = 0.19$ saving $20.75\%$ in comprehensive retention incentive costs, or $\tau^* = 0.18$ saving $38.20\%$ in misclassification error penalties over naive $0.50$ demarcation).
+3. **Binary Decisions (Phase 5)**: Derived by applying an explicit, cost-optimized threshold ($\tau^* = 0.19$ with an illustrative 20.75% modeled cost reduction under a 4-term operational scenario, or $\tau^* = 0.18$ saving an illustrative 38.20% under a 2-term misclassification penalty scenario over naive $0.50$ demarcation).
 4. **Business Risk Tiers (Phase 5)**: Standardized contiguous segments (Low $[0.0, 0.20)$, Medium $[0.20, 0.50)$, High $[0.50, 1.00]$) mapping continuous probabilities to tiered operational intervention workflows, conceptually decoupled from binary decision thresholds.
 
 ---

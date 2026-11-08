@@ -104,8 +104,8 @@ def generate_social_preview() -> None:
     metrics = [
         ("Primary Metric (PR-AUC)", "0.6684 ± 0.02", "#34D399"),
         ("ROC-AUC Score", "0.8495 ± 0.01", "#38BDF8"),
-        ("Cost Savings (τ* = 0.19)", "20.75% ($96,900)", "#F59E0B"),
-        ("ECE Calibration Error", "0.0265 (Sigmoid)", "#A78BFA"),
+        ("Cost-Optimal Cutoff", "τ* = 0.19 (Decision Policy)", "#F59E0B"),
+        ("Brier Calibration Score", "0.1335 (Sigmoid)", "#A78BFA"),
     ]
 
     for idx, (title, val, col) in enumerate(metrics):
@@ -184,7 +184,7 @@ def generate_social_preview() -> None:
     ax.text(
         0.08,
         0.07,
-        "IBM Telco Customer Churn Snapshot • 47 Baseline Predictors • MIT Licensed Platform Code",
+        "IBM Telco Customer Churn Snapshot • 47 Baseline Predictors • Illustrative Cost Scenario • MIT License",
         transform=ax.transAxes,
         fontsize=9.5,
         color="#64748B",
