@@ -407,10 +407,10 @@ customer = {
 # Run single prediction with TreeSHAP explanation
 result = engine.predict_single(customer, include_explanation=True)
 
-print(f"Calibrated Churn Probability: {result.probability:.4f}")
-print(f"Policy Classification: {result.binary_label}")
+print(f"Calibrated Churn Probability: {result.estimated_probability:.4f}")
+print(f"Predicted Class: {result.predicted_label} (Class {result.predicted_class})")
 print(f"Operational Risk Tier: {result.risk_tier}")
-print(f"Top Attribution: {result.feature_attributions[0]}")
+print(f"Top Churn Driver: {result.explanation['top_churn_drivers'][0]['feature']}")
 ```
 
 ---

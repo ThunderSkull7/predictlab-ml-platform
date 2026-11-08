@@ -50,6 +50,9 @@ models/*
 !models/.gitkeep
 artifacts/*
 !artifacts/.gitkeep
+!artifacts/model_phase5_calibrated.joblib
+!artifacts/model_phase4.joblib
+!artifacts/model.joblib
 
 # Temporary / Scratch
 tmp/
