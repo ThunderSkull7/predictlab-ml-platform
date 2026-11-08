@@ -34,6 +34,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
+          pip install -r requirements.txt
           pip install -e ".[dev]"
 
       - name: Run Ruff Linting
@@ -43,3 +44,21 @@ jobs:
       - name: Run Pytest
         run: |
           pytest
+
+      - name: Verify Streamlit Startup and Health Endpoint on Linux
+        run: |
+          streamlit run app.py --server.headless=true --server.port=8501 &
+          STREAMLIT_PID=$!
+          echo "Streamlit started on PID $STREAMLIT_PID. Checking health endpoint..."
+          for i in $(seq 1 30); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8501/_stcore/health || true)
+            if [ "$STATUS" = "200" ]; then
+              echo "Streamlit health check passed (HTTP 200) after $i second(s)."
+              kill $STREAMLIT_PID
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Streamlit health check timed out."
+          kill $STREAMLIT_PID || true
+          exit 1

@@ -61,6 +61,14 @@ def render_batch_analysis_page() -> None:
                 use_container_width=True,
             )
 
+    # Public Demonstration Privacy & Confidentiality Notice
+    st.warning(
+        "🔒 **Public Demonstration Privacy Notice:** PredictLab is an unauthenticated public portfolio demonstration. "
+        "**Do not upload real customer personal, financial, or confidential information.** "
+        "Uploaded records are processed strictly in temporary server memory and are never persisted to disk or databases. "
+        "Please use synthetic, benchmark, or anonymized cohort data only."
+    )
+
     # File Uploader
     uploaded_file = st.file_uploader(
         "Upload Cohort CSV File:",

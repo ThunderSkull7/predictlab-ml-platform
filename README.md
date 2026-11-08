@@ -452,7 +452,39 @@ print(f"Top Churn Driver: {result.explanation['top_churn_drivers'][0]['feature']
 
 ---
 
-## 15. Scientific Limitations & Governance Disclosures
+## 15. Streamlit Community Cloud Deployment Guide
+
+PredictLab is preflight-verified and ready for deployment to [Streamlit Community Cloud](https://streamlit.io/cloud).
+
+### Deployment Parameters:
+- **Hosting Platform**: Streamlit Community Cloud (Ubuntu Linux container)
+- **Repository**: `ThunderSkull7/predictlab-ml-platform`
+- **Target Branch**: `main`
+- **Main File Path**: `app.py`
+- **Python Version**: `3.12`
+- **Dependency Configuration**: `requirements.txt` (pinned production runtime dependencies)
+- **Environment Secrets**: **None required**. The platform is self-contained with no external API keys, database credentials, or environment secrets.
+
+### Public Demonstration Privacy Disclosure:
+> 🔒 **Public Demonstration Notice:** PredictLab is configured as an unauthenticated public portfolio demonstration. **Do not upload real customer personal, financial, or confidential information.** All uploaded customer batch records are evaluated strictly in ephemeral server memory and are never persisted, stored, or logged to disk or databases. Please test using synthetic, sample, or anonymized cohort data.
+
+### Step-by-Step Deployment Procedure:
+1. Navigate to [share.streamlit.io](https://share.streamlit.io) and sign in with GitHub (`ThunderSkull7`).
+2. Click **Create app** and select **Deploy a public app from GitHub**.
+3. Fill in the application repository settings:
+   - **Repository**: `ThunderSkull7/predictlab-ml-platform`
+   - **Branch**: `main`
+   - **Main file path**: `app.py`
+   - **App URL**: `predictlab-ml-platform` (or your preferred subdomain)
+4. Under **Advanced settings**:
+   - Ensure the Python version is selected as **3.12**.
+   - No entries are needed in the **Secrets** section.
+5. Click **Deploy!**
+   - Streamlit Cloud provisions the container, runs `pip install -r requirements.txt`, starts `app.py`, and publishes the live interactive web platform.
+
+---
+
+## 16. Scientific Limitations & Governance Disclosures
 
 1. **Retrospective Scope**: The model assesses historical patterns in a single snapshot; it does not forecast customer behavior under future macroeconomic shifts or altered product pricing.
 2. **Omission of Survival Analysis**: Time-to-event dynamics (e.g. hazard curves over time) are not modeled because event timestamps are absent in the source data.
@@ -462,7 +494,7 @@ print(f"Top Churn Driver: {result.explanation['top_churn_drivers'][0]['feature']
 
 ---
 
-## 16. Development Roadmap & Project History
+## 17. Development Roadmap & Project History
 
 - [x] **Phase 1: Project Setup, Governance & Engineering Foundations**
   - Problem formulation, architecture design, Pydantic schema validation, and git workflows.
@@ -482,6 +514,12 @@ print(f"Top Churn Driver: {result.explanation['top_churn_drivers'][0]['feature']
   - Workflow permissions hardening (`contents: read`), run concurrency control with auto-cancellation, 15-minute job timeout, `.gitignore` artifact inclusion, and cross-platform verification.
 - [x] **Phase 7.2: Public GitHub Repository Preparation**
   - Public repository metadata configuration, MIT license placeholder audit, GitHub 1200x630 social preview card, `.gitattributes` LF normalization, and publication delivery report.
+- [x] **Phase 7.3: Final Publication Corrections & Branch Migration**
+  - Copyright assignment (`ThunderSkull7`), branch migration (`master` -> `main`), ECE 0.0265 reproduction audit, and cost-savings disclosure alignment.
+- [x] **Phase 8: Authorized GitHub Repository Creation & Publication**
+  - Created public GitHub repository `ThunderSkull7/predictlab-ml-platform`, configured topics, pushed `main` history, and verified remote CI success.
+- [x] **Phase 9.1: Streamlit Community Cloud Deployment Preflight**
+  - `requirements.txt` runtime dependency manifest, portable import resolution, batch upload privacy warnings, Linux health check CI validation, and resource audit.
 
 ---
 

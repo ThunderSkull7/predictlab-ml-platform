@@ -3,9 +3,17 @@
 Retrospective customer churn classification and risk ranking using the IBM Telco Customer Churn dataset.
 """
 
-import streamlit as st
+import sys
+from pathlib import Path
 
-from predictlab.app.utils.styling import inject_custom_css
+# Ensure 'src' directory is in Python path for portable execution across all platforms
+_SRC_DIR = Path(__file__).resolve().parent / "src"
+if str(_SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(_SRC_DIR))
+
+import streamlit as st  # noqa: E402
+
+from predictlab.app.utils.styling import inject_custom_css  # noqa: E402
 
 # 1. Page Configuration
 st.set_page_config(
