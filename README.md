@@ -1,10 +1,11 @@
 # PredictLab — Portfolio-Grade Predictive Analytics Platform
 
-[![PredictLab CI](https://github.com/predictlab/predictlab-ml-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/predictlab/predictlab-ml-platform/actions)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Code Style: Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![Tests: Pytest](https://img.shields.io/badge/tests-165%20passed-success.svg)](https://docs.pytest.org/)
+
+![PredictLab Social Card](docs/assets/social_preview.png)
 
 **PredictLab** is an enterprise-grade predictive analytics and machine learning platform engineered to demonstrate rigorous ML engineering standards, probabilistic modeling, calibration analysis, cost-sensitive threshold optimization, TreeSHAP explainability, and fail-closed production inference.
 
@@ -94,6 +95,40 @@ PredictLab rigorously separates four distinct layers of statistical outputs:
 └─────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
+```mermaid
+flowchart TD
+    subgraph DataLayer ["1. Data Ingestion & Quality Layer"]
+        CSV["Raw Dataset (7,043 rows, 21 cols)"] --> Pydantic["Pydantic v2 Schema Validation"]
+        Pydantic --> Split["Stratified 80/20 Partition (N_train=5,634)"]
+    end
+
+    subgraph PreprocLayer ["2. Leakage-Free Preprocessing"]
+        Split --> Trans["47-Feature Preprocessor"]
+        Trans --> Med["Deterministic Imputation (TotalCharges = 0.0 for tenure = 0)"]
+        Trans --> OHE["One-Hot Encoding (Contract, InternetService, Payment)"]
+        Trans --> Scaler["StandardScaler (Numerical Predictors)"]
+    end
+
+    subgraph ModelLayer ["3. Ensemble & Calibration Engine"]
+        Med & OHE & Scaler --> HGB["5-Fold HistGradientBoosting Ensemble"]
+        HGB --> Platt["Platt Sigmoid Calibration (ECE = 0.0265)"]
+    end
+
+    subgraph DecisionLayer ["4. Decision Policy & Explainability"]
+        Platt --> CalProb["Calibrated Probability: p_hat in [0, 1]"]
+        CalProb --> OptCut["Cost-Optimal Threshold tau* = 0.19 (4-Term Model)"]
+        CalProb --> Tiers["Decoupled Risk Tiers (Low < 0.20, Med 0.20-0.50, High >= 0.50)"]
+        HGB --> TreeSHAP["5-Estimator TreeSHAP Attribution Waterfall"]
+    end
+
+    subgraph PresentationLayer ["5. Production Inference & Streamlit UI"]
+        OptCut & Tiers & TreeSHAP --> Engine["Fail-Closed InferenceEngine (SHA-256 Verified)"]
+        Engine --> SinglePage["Single Customer Prediction & SHAP"]
+        Engine --> BatchPage["Batch Cohort Scoring (up to 15,000 rows)"]
+        Engine --> InsightsPage["Global Insights & Scientific Governance"]
+    end
+```
+
 ---
 
 ## 3. Dataset Lineage, Provenance & Quality Audit
@@ -173,6 +208,8 @@ Evaluating 81 threshold candidates ($\tau \in [0.10, 0.90]$) across the 5,634 tr
 | **Cost-Optimal $\tau^* = 0.19$** | **1,304** | **1,496** | **191** | **2,643** | **12.8%** | **$370,100** | **-20.75% ($96,900 Saved)** |
 
 *Reconciliation Note*: In a simplified 2-term misclassification model ($\text{Cost} = 500 \cdot FN + 100 \cdot FP$), the optimal threshold shifts to $\tau^* = 0.18$, yielding a 38.20% (\$147,900) cost reduction. PredictLab defaults to the 4-term operational model to realistically budget customer outreach costs.
+
+*Simulation & Modeling Disclaimer*: Modeled financial figures and percentage cost reductions represent simulated expected-cost outcomes under stated hypothetical business utility parameters across the historical training cohort. They do not constitute guarantees of realized business profits, actual operational savings, or forward-looking financial outcomes.
 
 ---
 
@@ -441,6 +478,10 @@ print(f"Top Churn Driver: {result.explanation['top_churn_drivers'][0]['feature']
   - 5-page interactive web application, fail-closed artifact loading, TOCTOU vulnerability elimination, in-memory verified-bytes deserialization, and comprehensive integration testing.
 - [x] **Phase 7: Final Quality Assurance, Security Audit & Publication Readiness**
   - Comprehensive security audit, deployment readiness assessment, complete 5-page UI screenshot gallery, full regression verification (165/165 tests passing, Ruff clean), and final QA sign-off.
+- [x] **Phase 7.1: CI Hardening & Local Release Verification**
+  - Workflow permissions hardening (`contents: read`), run concurrency control with auto-cancellation, 15-minute job timeout, `.gitignore` artifact inclusion, and cross-platform verification.
+- [x] **Phase 7.2: Public GitHub Repository Preparation**
+  - Public repository metadata configuration, MIT license placeholder audit, GitHub 1200x630 social preview card, `.gitattributes` LF normalization, and publication delivery report.
 
 ---
 

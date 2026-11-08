@@ -54,12 +54,12 @@ The Streamlit analytical application was launched locally on port `8501`. Five u
 | **Explainability** | `/explainability` | [`page4_explainability.png`](file:///d:/Project/Predictive%20Analytics%20Platform/reports/figures/screenshots/page4_explainability.png) | 194,702 B | `fb8b97bfeb69cfa0a08caf5916d576b64b472505782bbcfd88bef8e21a780377` | 5-fold cross-validated Permutation Importance chart, TreeSHAP log-odds methodology, `"Risk Tier Cohort Summary"` table with cohort scope note. |
 | **Methodology** | `/methodology` | [`page5_methodology.png`](file:///d:/Project/Predictive%20Analytics%20Platform/reports/figures/screenshots/page5_methodology.png) | 234,535 B | `ce98666f270d5822ece0e37af65811b1f1c785cc20d4e1ac38286e8fa396edb6` | Retrospective classification scope, SHA-256 data lineage, leakage protection proof, calibration evaluation, and non-causal interpretation policy. |
 
-All five files are accessible directly on disk and in the brain artifact repository:
-- `C:\Users\shaha\.gemini\antigravity\brain\bc5a8cb2-3a53-45e8-be6e-9d4ad84eee63\page1_overview.png`
-- `C:\Users\shaha\.gemini\antigravity\brain\bc5a8cb2-3a53-45e8-be6e-9d4ad84eee63\page2_single_prediction.png`
-- `C:\Users\shaha\.gemini\antigravity\brain\bc5a8cb2-3a53-45e8-be6e-9d4ad84eee63\page3_batch_analysis.png`
-- `C:\Users\shaha\.gemini\antigravity\brain\bc5a8cb2-3a53-45e8-be6e-9d4ad84eee63\page4_explainability.png`
-- `C:\Users\shaha\.gemini\antigravity\brain\bc5a8cb2-3a53-45e8-be6e-9d4ad84eee63\page5_methodology.png`
+All five files are accessible directly on disk in the figures screenshot directory:
+- `reports/figures/screenshots/page1_overview.png`
+- `reports/figures/screenshots/page2_single_prediction.png`
+- `reports/figures/screenshots/page3_batch_analysis.png`
+- `reports/figures/screenshots/page4_explainability.png`
+- `reports/figures/screenshots/page5_methodology.png`
 
 ---
 
