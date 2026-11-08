@@ -104,8 +104,8 @@ def generate_social_preview() -> None:
     metrics = [
         ("Primary Metric (PR-AUC)", "0.6684 ± 0.02", "#34D399"),
         ("ROC-AUC Score", "0.8495 ± 0.01", "#38BDF8"),
-        ("Cost-Optimal Cutoff", "τ* = 0.19 (Decision Policy)", "#F59E0B"),
-        ("Brier Calibration Score", "0.1335 (Sigmoid)", "#A78BFA"),
+        ("Illustrative Policy Threshold", "τ* = 0.19 (Decision Policy)", "#F59E0B"),
+        ("Brier Score", "0.1335 (Sigmoid)", "#A78BFA"),
     ]
 
     for idx, (title, val, col) in enumerate(metrics):

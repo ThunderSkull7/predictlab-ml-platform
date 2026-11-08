@@ -20,7 +20,7 @@ The machine learning task is formulated as:
 The platform provides a production-grade multi-page Streamlit web application powered by the validated `predictlab` inference architecture.
 
 ### Page 1 — Overview Dashboard
-Macro analysis of dataset parameters, cross-validation benchmarks, 4-term cost optimization savings, and risk tier distribution.
+Macro analysis of dataset parameters, cross-validation benchmarks, illustrative 4-term cost optimization modeling, and risk tier distribution.
 ![Overview Dashboard](reports/figures/screenshots/page1_overview.png)
 
 ### Page 2 — Single Customer Prediction & Risk Scoring
@@ -205,7 +205,7 @@ Evaluating 81 threshold candidates ($\tau \in [0.10, 0.90]$) across the 5,634 tr
 | Decision Threshold ($\tau$) | True Positives (TP) | False Positives (FP) | False Negatives (FN) | True Negatives (TN) | Undetected Churn Rate | Total Policy Cost | Cost Reduction vs Default |
 |---|---|---|---|---|---|---|---|
 | Default $\tau = 0.50$ | 798 | 387 | 697 | 3,752 | 46.6% | $467,000 | Baseline (0.0%) |
-| **Cost-Optimal $\tau^* = 0.19$** | **1,304** | **1,496** | **191** | **2,643** | **12.8%** | **$370,100** | **-20.75% ($96,900 Saved)** |
+| **Cost-Optimal $\tau^* = 0.19$** | **1,304** | **1,496** | **191** | **2,643** | **12.8%** | **$370,100** | **-20.75% ($96,900 Modeled Reduction)** |
 
 > **Illustrative cost scenario:** 20.75% modeled cost reduction ($96,900), based on hypothetical cost assumptions ($C_{\text{FN}}=\$500, C_{\text{FP}}=\$100, C_{\text{TP}}=\$100, C_{\text{TN}}=\$0$) and training out-of-fold predictions ($N=5,634$, modeled cost drops from $467,000 to $370,100, or $65.69/customer across the cohort). This does not represent realized business profits, actual operational savings, or guaranteed future business results.
 
